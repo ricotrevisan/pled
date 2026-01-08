@@ -9,6 +9,7 @@ defmodule Pled.Commands.Encoder.Action do
       if File.exists?(actions_dir) do
         actions_dir
         |> File.ls!()
+        |> Enum.reject(&String.starts_with?(&1, "."))
         |> Enum.reduce(
           %{},
           fn action_dir, acc ->

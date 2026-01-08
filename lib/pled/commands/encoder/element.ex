@@ -13,6 +13,7 @@ defmodule Pled.Commands.Encoder.Element do
       found_elements =
         elements_dir
         |> File.ls!()
+        |> Enum.reject(&String.starts_with?(&1, "."))
 
       UI.info(
         "found #{Enum.count(found_elements)} element#{if Enum.count(found_elements) == 1, do: "", else: "s"}: #{Enum.join(found_elements, ", ")}",

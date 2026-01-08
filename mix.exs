@@ -45,11 +45,11 @@ defmodule Pled.MixProject do
 
         _ ->
           [
-            macos_x86: [os: :darwin, cpu: :x86_64],
+            # macos_x86: [os: :darwin, cpu: :x86_64],
             macos_arm: [os: :darwin, cpu: :aarch64],
-            linux_arm: [os: :linux, cpu: :aarch64],
-            linux_x86: [os: :linux, cpu: :x86_64],
-            windows: [os: :windows, cpu: :x86_64]
+            # linux_arm: [os: :linux, cpu: :aarch64],
+            # linux_x86: [os: :linux, cpu: :x86_64],
+            # windows: [os: :windows, cpu: :x86_64]
           ]
       end
 
