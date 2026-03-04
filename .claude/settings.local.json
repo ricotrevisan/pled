@@ -4,7 +4,10 @@
       "Bash(cat:*)",
       "Bash(mix test:*)",
       "Bash(mkdir:*)",
-      "Bash(/Users/rico/dev/_wip/pled/burrito_out/pled_macos_arm init)"
+      "Bash(/Users/rico/dev/_wip/pled/burrito_out/pled_macos_arm init)",
+      "mcp__acp__Write",
+      "mcp__acp__Edit",
+      "mcp__acp__Bash"
     ],
     "deny": []
   }

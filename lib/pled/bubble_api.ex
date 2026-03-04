@@ -8,14 +8,13 @@ defmodule Pled.BubbleApi do
   @doc """
   Fetches plugin data from Bubble.io.
 
-  Requires environment variables:
-  - PLUGIN_ID: The ID of the plugin to fetch
-  - COOKIE: Authentication cookie for Bubble.io
+  Reads plugin ID from `.plugin_id` file (falls back to PLUGIN_ID env var).
+  Requires COOKIE environment variable for authentication.
 
   Returns `{:ok, plugin_data}` on success or `{:error, reason}` on failure.
   """
   def fetch_plugin do
-    with {:ok, plugin_id} <- get_env_var("PLUGIN_ID"),
+    with {:ok, plugin_id} <- Pled.PluginId.load(),
          {:ok, cookie} <- get_env_var("COOKIE") do
       url = "#{@base_url}/get_plugin?id=#{plugin_id}"
 
@@ -40,7 +39,7 @@ defmodule Pled.BubbleApi do
   def save_plugin do
     IO.puts("Uploading plugin...")
 
-    with {:ok, plugin_id} <- get_env_var("PLUGIN_ID"),
+    with {:ok, plugin_id} <- Pled.PluginId.load(),
          {:ok, cookie} <- get_env_var("COOKIE") do
       url = "https://bubble.io/appeditor/save_plugin"
 

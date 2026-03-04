@@ -8,18 +8,19 @@ defmodule Pled.Commands.Help do
     version #{Application.get_env(:pled, :version)}
 
     Usage:
-      pled init             Initialize a new Pled project structure
+      pled init <url|id>    Initialize project with a Bubble plugin URL or ID
       pled pull             Fetch plugin from Bubble.io and save to src/plugin.json
       pled push             Encodes and then upload plugin to Bubble.io
       pled push --force     Force push, skipping remote change detection
       pled encode           Prepares the files to upload. Compiles src/ files into dist/plugin.json
       pled upload <file>    Upload a file to Bubble.io CDN
-      pled watch            Starts the server that watches the `src/` directory for changes and pushes it to Bubble.
+      pled watch            Watches the `src/` directory for changes and pushes to Bubble
       pled check-remote     Check for remote changes without pushing
+      pled status           Show environment, auth, and sync status
 
-    Required Environment Variables:
-      PLUGIN_ID             The ID of the plugin to fetch
-      COOKIE                Authentication cookie for Bubble.io
+    Configuration:
+      .plugin_id            Plugin ID (created by 'pled init', committed to repo)
+      COOKIE env var        Authentication cookie for Bubble.io (the only secret)
     """)
 
     :ok

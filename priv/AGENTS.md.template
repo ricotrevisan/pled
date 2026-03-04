@@ -10,7 +10,8 @@
 
 ## Key Commands & Usage
 
-- Environment setup requirements (PLUGIN_ID, COOKIE, TEST_URL)
+- Plugin ID is stored in `.plugin_id` (committed to repo)
+- COOKIE must be set as a global environment variable (it is the only secret)
 - Main commands: pull, push, watch, encode, init
 - Testing commands and patterns
 

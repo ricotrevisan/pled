@@ -72,7 +72,18 @@ defmodule Pled do
             aliases: [h: :help, v: :verbose, r: :react]
           )
 
-        if invalid != [] or remaining != [], do: {:help, []}, else: {:init, parsed}
+        if invalid != [] do
+          {:help, []}
+        else
+          # First positional arg is the URL or plugin ID
+          opts =
+            case remaining do
+              [url_or_id | _] -> Keyword.put(parsed, :url_or_id, url_or_id)
+              [] -> parsed
+            end
+
+          {:init, opts}
+        end
 
       ["check-remote" | rest] ->
         {parsed, remaining, invalid} =
@@ -82,6 +93,15 @@ defmodule Pled do
           )
 
         if invalid != [] or remaining != [], do: {:help, []}, else: {:check_remote, parsed}
+
+      ["status" | rest] ->
+        {parsed, remaining, invalid} =
+          OptionParser.parse(rest,
+            strict: [help: :boolean, verbose: :boolean],
+            aliases: [h: :help, v: :verbose]
+          )
+
+        if invalid != [] or remaining != [], do: {:help, []}, else: {:status, parsed}
 
       [] ->
         {:help, []}
@@ -98,5 +118,6 @@ defmodule Pled do
   def handle_command({:watch, opts}), do: Commands.Watch.run(opts)
   def handle_command({:init, opts}), do: Commands.Init.run(opts)
   def handle_command({:check_remote, opts}), do: Commands.CheckRemote.run(opts)
+  def handle_command({:status, opts}), do: Commands.Status.run(opts)
   def handle_command({:help, _opts}), do: Commands.Help.run()
 end

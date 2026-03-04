@@ -1,33 +1,47 @@
 defmodule Pled.Commands.Init do
   @moduledoc """
-  Initialize a new Pled project structure
+  Initialize a new Pled project structure.
+
+  Usage:
+    pled init <bubble-plugin-url-or-id>
+    pled init https://bubble.io/plugin_editor?id=1234x5678
+    pled init 1234x5678
   """
+
+  alias Pled.PluginId
 
   def run(opts) do
     IO.puts("Initializing Pled project...")
 
-    with :ok <- create_envrc(),
+    url_or_id = Keyword.get(opts, :url_or_id)
+
+    with :ok <- save_plugin_id(url_or_id),
          :ok <- create_gitignore(),
          :ok <- create_agents_md(),
          :ok <- create_lib_directory(),
          :ok <- create_package_json(),
          :ok <- create_index_js(opts) do
-      react? = Keyword.get(opts, :react, false)
-
       IO.puts("""
-      ✓ Project initialized successfully!
+
+      ✓ Project initialized!
 
       Next steps:
-      1. Edit .envrc file with your PLUGIN_ID and COOKIE values
-      2. Run 'source .envrc' to load environment variables
-      3. Run 'pled pull' to fetch your plugin from Bubble.io
       """)
 
-      if react?,
-        do:
-          IO.write(
-            "4. run `npm install react react-dom --prefix lib` to install the React libraries"
-          )
+      if System.get_env("COOKIE") == nil do
+        IO.puts("1. Set COOKIE as a global env var (e.g. in ~/.zshrc)")
+        IO.puts("2. Run 'pled pull' to fetch your plugin from Bubble.io")
+      else
+        IO.puts("1. Run 'pled pull' to fetch your plugin from Bubble.io")
+      end
+
+      if Keyword.get(opts, :react, false) do
+        IO.puts("")
+
+        IO.puts(
+          "   Run `npm install react react-dom --prefix lib` to install the React libraries"
+        )
+      end
 
       :ok
     else
@@ -35,43 +49,56 @@ defmodule Pled.Commands.Init do
     end
   end
 
-  defp create_envrc do
-    envrc_content = """
-    # for more information on `direnv`, see: https://direnv.net
-
-    # grab the Bubble ID of your plugin
-    export PLUGIN_ID=
-
-    # grab the cookies from a Bubble session
-    export COOKIE=""
-
-    # add the url of the Bubble app that you use to test this plugin
-    # if your app has username and password, you can add it
-    # `https://USERNAME:PASSWORD@BUBBLE_ID.bubbleapps.io/version-test/PAGE_NAME`
-    export TEST_URL=
-    """
-
-    case File.exists?(".envrc") do
-      true ->
-        IO.puts("⚠ .envrc already exists, skipping...")
+  defp save_plugin_id(nil) do
+    # No argument provided — check if .plugin_id already exists
+    case PluginId.load() do
+      {:ok, id} ->
+        IO.puts("⚠ Using existing plugin ID: #{id}")
         :ok
 
-      false ->
-        File.write(".envrc", envrc_content)
-        IO.puts("✓ Created .envrc")
+      {:error, _} ->
+        IO.puts("""
+        Usage: pled init <bubble-plugin-url-or-id>
+
+        Examples:
+          pled init https://bubble.io/plugin_editor?id=1234x5678
+          pled init 1234x5678
+        """)
+
+        {:error, :missing_plugin_id}
+    end
+  end
+
+  defp save_plugin_id(input) do
+    case PluginId.extract(input) do
+      {:ok, id} ->
+        PluginId.save(id)
+        IO.puts("✓ Saved plugin ID to .plugin_id: #{id}")
         :ok
+
+      :error ->
+        IO.puts("""
+        ✗ Could not extract plugin ID from: #{input}
+
+        Expected formats:
+          https://bubble.io/plugin_editor?id=1234x5678
+          1234x5678
+        """)
+
+        {:error, :invalid_plugin_id}
     end
   end
 
   defp create_agents_md do
-    content = File.read!("priv/AGENTS.md.template")
+    template_path = Application.app_dir(:pled, "priv/AGENTS.md.template")
+    content = File.read!(template_path)
 
     case File.exists?("AGENTS.md") do
       true ->
         existing_content = File.read!("AGENTS.md")
 
         if String.contains?(existing_content, "# working with Pled") do
-          IO.puts("AGENTS.md already contains # working with Pled, skipping...")
+          IO.puts("⚠ AGENTS.md already contains Pled section, skipping...")
           :ok
         else
           File.write("AGENTS.md", existing_content <> content)
@@ -87,22 +114,15 @@ defmodule Pled.Commands.Init do
   end
 
   defp create_gitignore do
-    gitignore_content = """
-    .envrc
-    .src.json
-    lib/node_modules
-    lib/dist*
-    dist*
-    """
+    entries = [".envrc", ".src.json", "lib/node_modules", "lib/dist*", "dist*"]
+    gitignore_content = Enum.join(entries, "\n") <> "\n"
 
     case File.exists?(".gitignore") do
       true ->
         existing_content = File.read!(".gitignore")
 
-        entries_to_add = String.split(gitignore_content, "\n", trim: true)
-
         missing_entries =
-          Enum.filter(entries_to_add, fn entry ->
+          Enum.filter(entries, fn entry ->
             not String.contains?(existing_content, entry)
           end)
 
@@ -140,12 +160,11 @@ defmodule Pled.Commands.Init do
   end
 
   defp create_package_json do
-    lib_path = "lib"
-    package_json_path = Path.join(lib_path, "package.json")
+    package_json_path = Path.join("lib", "package.json")
 
     case File.exists?(package_json_path) do
       true ->
-        IO.puts("⚠ lib/package.json already exists, skipping npm init...")
+        IO.puts("⚠ lib/package.json already exists, skipping...")
         update_existing_package_json(package_json_path)
 
       false ->
@@ -212,13 +231,13 @@ defmodule Pled.Commands.Init do
         :ok
 
       false ->
-        index_context =
+        content =
           case Keyword.get(opts, :react, false) do
             true -> index_js_content(:react)
             false -> index_js_content()
           end
 
-        File.write(index_js_path, index_context)
+        File.write(index_js_path, content)
         IO.puts("✓ Created lib/index.js")
         :ok
     end

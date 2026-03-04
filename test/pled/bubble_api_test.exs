@@ -4,11 +4,12 @@ defmodule Pled.BubbleApiTest do
   alias Pled.BubbleApi
 
   describe "fetch_plugin/0" do
-    test "returns error when PLUGIN_ID environment variable is not set" do
+    test "returns error when PLUGIN_ID is not available" do
       System.delete_env("PLUGIN_ID")
       System.delete_env("COOKIE")
 
-      assert {:error, "Environment variable PLUGIN_ID is not set"} = BubbleApi.fetch_plugin()
+      assert {:error, msg} = BubbleApi.fetch_plugin()
+      assert msg =~ "Plugin ID not found"
     end
 
     test "returns error when COOKIE environment variable is not set" do

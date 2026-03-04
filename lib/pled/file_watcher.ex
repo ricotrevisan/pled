@@ -99,14 +99,14 @@ defmodule Pled.FileWatcher do
         :no_changes ->
           :ok
 
-        {:changes_detected, changes} ->
+        {:changes_detected, %Pled.PluginDiff{} = diff} ->
           IO.puts("")
 
           IO.puts(
             IO.ANSI.cyan() <> "🔄 Remote changes detected during watch mode" <> IO.ANSI.reset()
           )
 
-          format_remote_changes(changes)
+          format_remote_changes(diff)
           IO.puts("Pulling remote changes...")
 
           case Pled.Commands.Pull.run([]) do
@@ -175,33 +175,14 @@ defmodule Pled.FileWatcher do
   defp format_error(error) when is_binary(error), do: error
   defp format_error(error), do: inspect(error)
 
-  defp format_remote_changes(changes) do
-    Enum.each(changes, fn change ->
-      case change do
-        {:metadata_changed, field, _old_val, _new_val} ->
-          IO.puts("  • Metadata '#{field}' changed")
+  defp format_remote_changes(%Pled.PluginDiff{} = diff) do
+    diff.summary
+    |> Enum.sort_by(fn {type, _count} -> Atom.to_string(type) end)
+    |> Enum.each(fn {type, count} ->
+      type_label =
+        type |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
 
-        {:element_added, name} ->
-          IO.puts("  • Element added: #{name}")
-
-        {:element_removed, name} ->
-          IO.puts("  • Element removed: #{name}")
-
-        {:element_modified, name} ->
-          IO.puts("  • Element modified: #{name}")
-
-        {:action_added, name} ->
-          IO.puts("  • Action added: #{name}")
-
-        {:action_removed, name} ->
-          IO.puts("  • Action removed: #{name}")
-
-        {:action_modified, name} ->
-          IO.puts("  • Action modified: #{name}")
-
-        _ ->
-          IO.puts("  • Change detected")
-      end
+      IO.puts("  • #{count} × #{type_label}")
     end)
   end
 end
