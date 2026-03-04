@@ -49,7 +49,7 @@ Pled is a standard Elixir OTP application.
 
 The following environment variables are required for interacting with the Bubble.io API:
 
-*   `COOKIE`: Your Bubble.io authentication cookie.
+*   `BUBBLE_COOKIE`: Your Bubble.io authentication cookie.
 *   `PLUGIN_ID`: The ID of the plugin you are working on.
 
 It is recommended to use a tool like `direnv` to manage these variables on a per-directory basis. An example `.envrc` file can be created using the `pled init` command.

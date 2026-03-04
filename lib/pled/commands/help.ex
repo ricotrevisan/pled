@@ -20,7 +20,7 @@ defmodule Pled.Commands.Help do
 
     Configuration:
       .plugin_id            Plugin ID (created by 'pled init', committed to repo)
-      COOKIE env var        Authentication cookie for Bubble.io (the only secret)
+      BUBBLE_COOKIE env var Authentication cookie for Bubble.io (the only secret)
     """)
 
     :ok

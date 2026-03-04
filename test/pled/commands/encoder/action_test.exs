@@ -10,12 +10,9 @@ defmodule Pled.Commands.Encoder.ActionTest do
       actions_dir = Path.join(tmp_dir, "actions")
       File.mkdir_p!(actions_dir)
 
-      # Create a sample action
-      action_dir = Path.join(actions_dir, "sample-action")
+      # Create a sample action (directory name must end with -KEY)
+      action_dir = Path.join(actions_dir, "sample-action-ABC")
       File.mkdir_p!(action_dir)
-
-      # Write .key file
-      File.write!(Path.join(action_dir, ".key"), "ABC")
 
       # Write action JSON with additional properties to test preservation
       action_json = %{
@@ -196,7 +193,6 @@ defmodule Pled.Commands.Encoder.ActionTest do
 
     test "handles actions without original code", %{
       src_json: src_json,
-      opts: opts,
       action_dir: action_dir
     } do
       import ExUnit.CaptureIO
@@ -208,9 +204,12 @@ defmodule Pled.Commands.Encoder.ActionTest do
 
       File.write!(Path.join(action_dir, "ABC.json"), Jason.encode!(action_json_no_code))
 
+      # Use verbose: true so UI.info messages are printed
+      verbose_opts = [actions_dir: Path.dirname(action_dir), verbose: true]
+
       output =
         capture_io(fn ->
-          result = Action.encode_actions(src_json, opts)
+          result = Action.encode_actions(src_json, verbose_opts)
           send(self(), {:result, result})
         end)
 
@@ -232,13 +231,12 @@ defmodule Pled.Commands.Encoder.ActionTest do
       actions_dir = Path.join(tmp_dir, "multi_actions")
       File.mkdir_p!(actions_dir)
 
-      # Create multiple actions
+      # Create multiple actions (directory name must end with -KEY)
       for {key, name} <- [{"ABC", "Action One"}, {"DEF", "Action Two"}] do
         action_dir =
-          Path.join(actions_dir, "#{String.downcase(name) |> String.replace(" ", "-")}")
+          Path.join(actions_dir, "#{String.downcase(name) |> String.replace(" ", "-")}-#{key}")
 
         File.mkdir_p!(action_dir)
-        File.write!(Path.join(action_dir, ".key"), key)
 
         action_json = %{
           "caption" => name,
@@ -289,7 +287,7 @@ defmodule Pled.Commands.Encoder.ActionTest do
       action_dir: action_dir,
       original_json: original_json
     } do
-      result = Action.generate_code_block(action_dir, original_json)
+      result = Action.generate_code_block(action_dir, original_json, false)
       # Should preserve non-function properties but remove server/client functions
       expected_code = original_json["code"] |> Map.drop(["server", "client"])
       assert result == %{"code" => expected_code}
@@ -298,7 +296,7 @@ defmodule Pled.Commands.Encoder.ActionTest do
     test "generates server function only", %{action_dir: action_dir, original_json: original_json} do
       File.write!(Path.join(action_dir, "server.js"), "    return { modified: true };")
 
-      result = Action.generate_code_block(action_dir, original_json)
+      result = Action.generate_code_block(action_dir, original_json, false)
 
       assert Map.keys(result["code"]) == ["server"]
       assert result["code"]["server"]["fn"] =~ "modified: true"
@@ -307,7 +305,7 @@ defmodule Pled.Commands.Encoder.ActionTest do
     test "generates client function only", %{action_dir: action_dir, original_json: original_json} do
       File.write!(Path.join(action_dir, "client.js"), "    console.log('modified');")
 
-      result = Action.generate_code_block(action_dir, original_json)
+      result = Action.generate_code_block(action_dir, original_json, false)
 
       assert Map.keys(result["code"]) == ["client"]
       assert result["code"]["client"]["fn"] =~ "modified"
@@ -317,7 +315,7 @@ defmodule Pled.Commands.Encoder.ActionTest do
       File.write!(Path.join(action_dir, "server.js"), "    return { new: true };")
 
       # Pass JSON without code section
-      result = Action.generate_code_block(action_dir, %{})
+      result = Action.generate_code_block(action_dir, %{}, false)
 
       # Should still generate new function
       assert result["code"]["server"]["fn"] =~ "new: true"

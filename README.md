@@ -2,11 +2,11 @@
 
 A CLI for developing Bubble.io plugins locally with real files and version control.
 
-Pled pulls your plugin from Bubble, decodes it into a clean `src/` tree (JS files with readable names), then encodes and pushes changes back to Bubble. It’s designed for Bubble plugin builders who want a faster edit–test loop and better tooling than the web editor.
+Pled pulls your plugin from Bubble, decodes it into a clean `src/` tree (JS files with readable names), then encodes and pushes changes back to Bubble. It's designed for Bubble plugin builders who want a faster edit-test loop and better tooling than the web editor.
 
 ## Quickstart
 
-- You’re comfortable with Bubble plugins (elements/actions/fields) but new(ish) to JavaScript.
+- You're comfortable with Bubble plugins (elements/actions/fields) but new(ish) to JavaScript.
 - You want to edit JS locally and keep your plugin in Git.
 
 1) Initialize a Pled project
@@ -15,35 +15,27 @@ Create a directory per plugin and initialize it:
 ```sh
 mkdir my-bubble-plugin
 cd my-bubble-plugin
-pled init
+pled init https://bubble.io/plugin_editor?id=some_bubble_plugin
 ```
 
 - This creates helpful scaffolding:
-  - .envrc (where you’ll put PLUGIN_ID and COOKIE)
+  - .plugin_id (stores the plugin ID — not a secret, commit it)
   - .gitignore
   - src/, dist/, and support files (e.g., lib/, llm.md)
 
-2) Set environment variables
-- Pled requires:
-  - PLUGIN_ID: Your Bubble plugin ID (from your plugin URL in Bubble)
-  - COOKIE: Your authenticated Bubble cookie string
+2) Set BUBBLE_COOKIE
+- Pled requires a `BUBBLE_COOKIE` environment variable with your authenticated Bubble cookie string.
+- Add it to your shell profile (`~/.zshrc` or `~/.bashrc`):
+    export BUBBLE_COOKIE="meta_xxx=...; meta_yyy=...; ..." (see below for instructions)
 
-- Edit the generated `.envrc` and add:
-    export PLUGIN_ID="YOUR_PLUGIN_ID"
-    export COOKIE="meta_xxx=...; meta_yyy=...; ..." (see below for instructions)
-  - Allow it:
-  ```sh
-  direnv allow
-  ```
-
-Security reminder: Your COOKIE grants access to your Bubble account. Treat it like a secret. Rotate it if needed.
+Security reminder: Your BUBBLE_COOKIE grants access to your Bubble account. Treat it like a secret. Rotate it if needed.
 
 3) Pull your plugin
 - Fetch current plugin config and decode to local files:
     pled pull
 
 4) Edit locally
-- Open `src/` in your editor. You’ll see:
+- Open `src/` in your editor. You'll see:
   - src/plugin.json        → metadata for your plugin
   - src/shared.html        → shared HTML snippets (if any)
   - src/elements/...       → elements with JS files:
@@ -77,7 +69,7 @@ Security reminder: Your COOKIE grants access to your Bubble account. Treat it li
 - Edit: You change JS and metadata locally; commit to Git as needed
 - Push: Local `src/` → Pled Encoder → Bubble API
 
-Pled maintains round-trip fidelity: pulling and pushing won’t scramble your plugin structure. It separates Bubble’s embedded JS functions into individual files so you can work like a normal JS project.
+Pled maintains round-trip fidelity: pulling and pushing won't scramble your plugin structure. It separates Bubble's embedded JS functions into individual files so you can work like a normal JS project.
 
 ## Installation
 
@@ -93,10 +85,9 @@ Verify:
 ## Environment setup
 
 - Required:
-  - PLUGIN_ID: The Bubble plugin ID (visible in the plugin’s URL)
-  - COOKIE: The `meta_*` cookies from your logged-in Bubble session, concatenated by semicolons
+  - BUBBLE_COOKIE: The `meta_*` cookies from your logged-in Bubble session, concatenated by semicolons
 
-- How to get COOKIE:
+- How to get BUBBLE_COOKIE:
   - Go to https://bubble.io and log in
   - Open the browser dev tools
   - go to the network tab,
@@ -105,24 +96,15 @@ Verify:
   - scroll down to "Request Headers"
   - find the "Cookie"
   - copy the entire value or just the pairs where the key starts with `meta_`
-  - add that in your `.envrc` as `export COOKIE="..."`
+  - add it to your shell profile (`~/.zshrc` or `~/.bashrc`) as `export BUBBLE_COOKIE="..."`
 
 ![get_bubble_cookie.png](get_bubble_cookie.png)
-
-- Using direnv (recommended per-plugin):
-    # .envrc
-    export PLUGIN_ID="plug_xxxxxxxxxxxxxxxx"
-    export COOKIE="meta_xxx=...; meta_yyy=...; ..."
-    # Optional: other plugin-specific vars
-    # Then run: direnv allow
 
 ## Common workflows
 
 - Start a new local workspace for an existing plugin:
     mkdir my-bubble-plugin && cd my-bubble-plugin
-    pled init
-    # edit .envrc with PLUGIN_ID and COOKIE
-    direnv allow
+    pled init https://bubble.io/plugin_editor?id=1234x5678
     pled pull
 
 - Edit and push:
@@ -165,13 +147,12 @@ You should see:
       pled check-remote     Check for remote changes without pushing
 
     Required Environment Variables:
-      PLUGIN_ID             The ID of the plugin to fetch
-      COOKIE                Authentication cookie for Bubble.io
+      BUBBLE_COOKIE         Authentication cookie for Bubble.io
 
 ## Tips for Bubble builders (with beginner JS)
 
 - Start with `update.js`: This is where you respond to property changes and redraw your element.
-- Keep function arguments intact: Bubble calls your functions with specific parameters; don’t remove them.
+- Keep function arguments intact: Bubble calls your functions with specific parameters; don't remove them.
 - Add small, targeted logs:
     console.log("[MyElement] update", properties);
 - For actions, decide between:
@@ -182,8 +163,7 @@ You should see:
 ## Troubleshooting
 
 - 401/403 errors:
-  - COOKIE likely expired or not set for the bubble.io domain. Re-grab the cookie.
-  - Ensure PLUGIN_ID is correct.
+  - BUBBLE_COOKIE likely expired or not set for the bubble.io domain. Re-grab the cookie.
 
 - Push rejects because of remote changes:
   - Pull first: `pled pull`
@@ -193,9 +173,9 @@ You should see:
   - Confirm you edited files under `src/` (not `dist/`)
   - Try `pled encode` and inspect `dist/plugin.json` to verify your changes are present.
 
-- Watch doesn’t trigger:
+- Watch doesn't trigger:
   - Only JS changes in `src/` are watched.
-  - Ensure your editor writes to disk and there’s no file permission issue.
+  - Ensure your editor writes to disk and there's no file permission issue.
 
 ## Project structure (local)
 
@@ -217,7 +197,7 @@ You should see:
 - Use Git from day one. Commit after successful pushes.
 - Prefer small, incremental changes and test in Bubble often.
 - Keep logs consistent and easy to search (prefix with your element/action name).
-- Treat COOKIE like a password; don’t commit it to Git.
+- Treat BUBBLE_COOKIE like a password; don't commit it to Git.
 
 ## License / Version
 

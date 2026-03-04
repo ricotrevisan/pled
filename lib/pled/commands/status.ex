@@ -57,16 +57,16 @@ defmodule Pled.Commands.Status do
       end
 
     cookie_ok =
-      case System.get_env("COOKIE") do
+      case System.get_env("BUBBLE_COOKIE") do
         nil ->
-          IO.puts("  " <> IO.ANSI.red() <> "✗ COOKIE is not set" <> IO.ANSI.reset())
+          IO.puts("  " <> IO.ANSI.red() <> "✗ BUBBLE_COOKIE is not set" <> IO.ANSI.reset())
           false
 
         cookie ->
           IO.puts(
             "  " <>
               IO.ANSI.green() <>
-              "✓ COOKIE is set (#{String.length(cookie)} chars)" <> IO.ANSI.reset()
+              "✓ BUBBLE_COOKIE is set (#{String.length(cookie)} chars)" <> IO.ANSI.reset()
           )
 
           true

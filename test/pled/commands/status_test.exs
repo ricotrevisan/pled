@@ -10,7 +10,7 @@ defmodule Pled.Commands.StatusTest do
   setup do
     # Store original env vars
     original_plugin_id = System.get_env("PLUGIN_ID")
-    original_cookie = System.get_env("COOKIE")
+    original_cookie = System.get_env("BUBBLE_COOKIE")
 
     # Clean up test snapshot
     File.rm(@test_snapshot_file)
@@ -27,9 +27,9 @@ defmodule Pled.Commands.StatusTest do
       end
 
       if original_cookie do
-        System.put_env("COOKIE", original_cookie)
+        System.put_env("BUBBLE_COOKIE", original_cookie)
       else
-        System.delete_env("COOKIE")
+        System.delete_env("BUBBLE_COOKIE")
       end
 
       File.rm(@test_snapshot_file)
@@ -42,38 +42,38 @@ defmodule Pled.Commands.StatusTest do
   describe "run/1 environment checks" do
     test "shows PLUGIN_ID not found when missing" do
       System.delete_env("PLUGIN_ID")
-      System.delete_env("COOKIE")
+      System.delete_env("BUBBLE_COOKIE")
 
       output = capture_io(fn -> Status.run([]) end)
 
       assert output =~ "PLUGIN_ID not found"
-      assert output =~ "COOKIE is not set"
+      assert output =~ "BUBBLE_COOKIE is not set"
     end
 
     test "shows PLUGIN_ID when present via env var" do
       System.put_env("PLUGIN_ID", "test-plugin-id")
-      System.delete_env("COOKIE")
+      System.delete_env("BUBBLE_COOKIE")
 
       output = capture_io(fn -> Status.run([]) end)
 
       assert output =~ "PLUGIN_ID: test-plugin-id"
       assert output =~ "from env var"
-      assert output =~ "COOKIE is not set"
+      assert output =~ "BUBBLE_COOKIE is not set"
     end
 
     test "shows both set when present" do
       System.put_env("PLUGIN_ID", "test-plugin-id")
-      System.put_env("COOKIE", "test-cookie")
+      System.put_env("BUBBLE_COOKIE", "test-cookie")
 
       output = capture_io(fn -> Status.run([]) end)
 
       assert output =~ "PLUGIN_ID: test-plugin-id"
-      assert output =~ "COOKIE is set"
+      assert output =~ "BUBBLE_COOKIE is set"
     end
 
     test "shows cannot verify auth when env vars missing" do
       System.delete_env("PLUGIN_ID")
-      System.delete_env("COOKIE")
+      System.delete_env("BUBBLE_COOKIE")
 
       output = capture_io(fn -> Status.run([]) end)
 
@@ -84,7 +84,7 @@ defmodule Pled.Commands.StatusTest do
   describe "run/1 sync status" do
     test "shows no baseline found when snapshot doesn't exist" do
       System.put_env("PLUGIN_ID", "test-plugin-id")
-      System.put_env("COOKIE", "invalid-cookie-for-test")
+      System.put_env("BUBBLE_COOKIE", "invalid-cookie-for-test")
 
       # Force snapshot to not exist
       File.rm(@test_snapshot_file)

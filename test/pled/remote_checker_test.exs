@@ -65,7 +65,7 @@ defmodule Pled.RemoteCheckerTest do
   describe "has_remote_changed?/0" do
     test "returns false on error when no snapshot" do
       # When there's an error (like no snapshot), should return false
-      assert false = RemoteChecker.has_remote_changed?()
+      refute RemoteChecker.has_remote_changed?()
     end
   end
 

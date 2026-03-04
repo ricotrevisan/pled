@@ -6,7 +6,11 @@ defmodule Pled.DecoderTest do
   describe "decoder" do
     @describetag :tmp_dir
     setup %{tmp_dir: tmp_dir} do
-      plugin_data = File.read!("priv/examples/small_plugin.json") |> Jason.decode!()
+      priv_dir = :code.priv_dir(:pled) |> to_string()
+
+      plugin_data =
+        File.read!(Path.join(priv_dir, "examples/small_plugin.json")) |> Jason.decode!()
+
       src_dir = Path.join(tmp_dir, "src")
       File.mkdir(src_dir)
 

@@ -1,5 +1,5 @@
 defmodule Pled.PluginModelTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Pled.PluginModel
 
@@ -37,6 +37,7 @@ defmodule Pled.PluginModelTest do
   end
 
   describe "fingerprint/1" do
+    @tag js_runner: :hash_based
     test "ignores map ordering differences" do
       plugin_a = base_plugin()
 
@@ -49,6 +50,7 @@ defmodule Pled.PluginModelTest do
       assert PluginModel.equal?(plugin_a, plugin_b)
     end
 
+    @tag js_runner: :hash_based
     test "detects substantive code differences" do
       plugin_a = base_plugin()
 
@@ -116,6 +118,13 @@ defmodule Pled.PluginModelTest do
 
   defp runner_for(:constant_program) do
     fn _, _ -> {:ok, %{"type" => "Program", "value" => 42}} end
+  end
+
+  defp runner_for(:hash_based) do
+    fn source, _opts ->
+      hash = :crypto.hash(:sha256, source) |> Base.encode16(case: :lower)
+      {:ok, %{"type" => "Program", "hash" => hash}}
+    end
   end
 
   defp runner_for(other), do: other

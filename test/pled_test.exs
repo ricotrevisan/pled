@@ -58,7 +58,9 @@ defmodule PledTest do
 
     test "parses upload command with file path" do
       assert {:upload, {"test.json", []}} = Pled.parse_args(["upload", "test.json"])
-      assert Pled.parse_args(["upload", "/path/to/file.json"]) == {:upload, "/path/to/file.json"}
+
+      assert Pled.parse_args(["upload", "/path/to/file.json"]) ==
+               {:upload, {"/path/to/file.json", []}}
     end
 
     test "returns help for empty arguments" do

@@ -9,13 +9,13 @@ defmodule Pled.BubbleApi do
   Fetches plugin data from Bubble.io.
 
   Reads plugin ID from `.plugin_id` file (falls back to PLUGIN_ID env var).
-  Requires COOKIE environment variable for authentication.
+  Requires BUBBLE_COOKIE environment variable for authentication.
 
   Returns `{:ok, plugin_data}` on success or `{:error, reason}` on failure.
   """
   def fetch_plugin do
     with {:ok, plugin_id} <- Pled.PluginId.load(),
-         {:ok, cookie} <- get_env_var("COOKIE") do
+         {:ok, cookie} <- get_env_var("BUBBLE_COOKIE") do
       url = "#{@base_url}/get_plugin?id=#{plugin_id}"
 
       headers = [
@@ -40,7 +40,7 @@ defmodule Pled.BubbleApi do
     IO.puts("Uploading plugin...")
 
     with {:ok, plugin_id} <- Pled.PluginId.load(),
-         {:ok, cookie} <- get_env_var("COOKIE") do
+         {:ok, cookie} <- get_env_var("BUBBLE_COOKIE") do
       url = "https://bubble.io/appeditor/save_plugin"
 
       headers = [
@@ -79,7 +79,7 @@ defmodule Pled.BubbleApi do
   - `file_type`: MIME type of the file (optional, defaults to "text/javascript")
 
   Requires environment variable:
-  - COOKIE: Authentication cookie for Bubble.io
+  - BUBBLE_COOKIE: Authentication cookie for Bubble.io
 
   Returns `{:ok, cdn_url}` on success or `{:error, reason}` on failure.
 
@@ -87,7 +87,7 @@ defmodule Pled.BubbleApi do
   e.g., "//meta-q.cdn.bubble.io/f1753595499566x160973835258829250/dist.js"
   """
   def upload_file(file_path, file_type \\ "text/javascript") do
-    with {:ok, cookie} <- get_env_var("COOKIE"),
+    with {:ok, cookie} <- get_env_var("BUBBLE_COOKIE"),
          {:ok, file_contents} <- File.read(file_path) do
       url = "https://bubble.io/fileupload"
 

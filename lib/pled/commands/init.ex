@@ -28,8 +28,8 @@ defmodule Pled.Commands.Init do
       Next steps:
       """)
 
-      if System.get_env("COOKIE") == nil do
-        IO.puts("1. Set COOKIE as a global env var (e.g. in ~/.zshrc)")
+      if System.get_env("BUBBLE_COOKIE") == nil do
+        IO.puts("1. Set BUBBLE_COOKIE as a global env var (e.g. in ~/.zshrc)")
         IO.puts("2. Run 'pled pull' to fetch your plugin from Bubble.io")
       else
         IO.puts("1. Run 'pled pull' to fetch your plugin from Bubble.io")

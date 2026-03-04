@@ -6,24 +6,24 @@ defmodule Pled.BubbleApiTest do
   describe "fetch_plugin/0" do
     test "returns error when PLUGIN_ID is not available" do
       System.delete_env("PLUGIN_ID")
-      System.delete_env("COOKIE")
+      System.delete_env("BUBBLE_COOKIE")
 
       assert {:error, msg} = BubbleApi.fetch_plugin()
       assert msg =~ "Plugin ID not found"
     end
 
-    test "returns error when COOKIE environment variable is not set" do
+    test "returns error when BUBBLE_COOKIE environment variable is not set" do
       System.put_env("PLUGIN_ID", "test_plugin_id")
-      System.delete_env("COOKIE")
+      System.delete_env("BUBBLE_COOKIE")
 
-      assert {:error, "Environment variable COOKIE is not set"} = BubbleApi.fetch_plugin()
+      assert {:error, "Environment variable BUBBLE_COOKIE is not set"} = BubbleApi.fetch_plugin()
 
       System.delete_env("PLUGIN_ID")
     end
 
     test "makes HTTP request with correct URL and headers when env vars are set" do
       System.put_env("PLUGIN_ID", "test_plugin_123")
-      System.put_env("COOKIE", "session=abc123")
+      System.put_env("BUBBLE_COOKIE", "session=abc123")
 
       # For now, this test will actually make a real HTTP request
       # In a real test suite, you'd want to mock this
@@ -38,7 +38,7 @@ defmodule Pled.BubbleApiTest do
       end
 
       System.delete_env("PLUGIN_ID")
-      System.delete_env("COOKIE")
+      System.delete_env("BUBBLE_COOKIE")
     end
 
     @tag :integration
@@ -50,7 +50,7 @@ defmodule Pled.BubbleApiTest do
       end
 
       System.put_env("PLUGIN_ID", System.get_env("PLUGIN_ID"))
-      System.put_env("COOKIE", "session=abc123")
+      System.put_env("BUBBLE_COOKIE", "session=abc123")
 
       assert {:ok, _body} = BubbleApi.fetch_plugin()
     end
