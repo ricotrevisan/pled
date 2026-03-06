@@ -10,6 +10,35 @@ defmodule Pled.Commands.Init do
 
   alias Pled.PluginId
 
+  def help do
+    IO.puts("""
+    Usage:
+      pled init [url_or_id] [options]
+
+    Description:
+      Initializes a new Pled project structure. Creates .plugin_id, .gitignore,
+      AGENTS.md, lib/ directory with package.json and index.js. If a plugin URL
+      or ID is provided, it is saved to .plugin_id for future commands.
+
+    Arguments:
+      [url_or_id]      Bubble plugin editor URL or plugin ID (optional if
+                       .plugin_id already exists)
+
+    Options:
+      --react, -r      Scaffold a React-based index.js in lib/
+      --verbose, -v    Show detailed output
+      --help, -h       Show this help message
+
+    Examples:
+      pled init https://bubble.io/plugin_editor?id=1234x5678
+      pled init 1234x5678
+      pled init 1234x5678 --react
+      pled init                      (uses existing .plugin_id)
+    """)
+
+    :ok
+  end
+
   def run(opts) do
     IO.puts("Initializing Pled project...")
 

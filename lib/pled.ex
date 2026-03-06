@@ -103,6 +103,22 @@ defmodule Pled do
 
         if invalid != [] or remaining != [], do: {:help, []}, else: {:status, parsed}
 
+      ["help", command_name | _] ->
+        case command_name do
+          "pull" -> {:pull, [help: true]}
+          "push" -> {:push, [help: true]}
+          "encode" -> {:encode, [help: true]}
+          "upload" -> {:upload, {"", [help: true]}}
+          "watch" -> {:watch, [help: true]}
+          "init" -> {:init, [help: true]}
+          "check-remote" -> {:check_remote, [help: true]}
+          "status" -> {:status, [help: true]}
+          _ -> {:help, []}
+        end
+
+      ["help"] ->
+        {:help, []}
+
       [] ->
         {:help, []}
 
@@ -111,13 +127,45 @@ defmodule Pled do
     end
   end
 
-  def handle_command({:encode, opts}), do: Commands.Encoder.encode(opts)
-  def handle_command({:pull, opts}), do: Commands.Pull.run(opts)
-  def handle_command({:push, opts}), do: Commands.Push.run(opts)
-  def handle_command({:upload, {file_path, opts}}), do: Commands.Upload.run(file_path, opts)
-  def handle_command({:watch, opts}), do: Commands.Watch.run(opts)
-  def handle_command({:init, opts}), do: Commands.Init.run(opts)
-  def handle_command({:check_remote, opts}), do: Commands.CheckRemote.run(opts)
-  def handle_command({:status, opts}), do: Commands.Status.run(opts)
+  def handle_command({:encode, opts}) do
+    if Keyword.get(opts, :help, false),
+      do: Commands.Encoder.help(),
+      else: Commands.Encoder.encode(opts)
+  end
+
+  def handle_command({:pull, opts}) do
+    if Keyword.get(opts, :help, false), do: Commands.Pull.help(), else: Commands.Pull.run(opts)
+  end
+
+  def handle_command({:push, opts}) do
+    if Keyword.get(opts, :help, false), do: Commands.Push.help(), else: Commands.Push.run(opts)
+  end
+
+  def handle_command({:upload, {file_path, opts}}) do
+    if Keyword.get(opts, :help, false),
+      do: Commands.Upload.help(),
+      else: Commands.Upload.run(file_path, opts)
+  end
+
+  def handle_command({:watch, opts}) do
+    if Keyword.get(opts, :help, false), do: Commands.Watch.help(), else: Commands.Watch.run(opts)
+  end
+
+  def handle_command({:init, opts}) do
+    if Keyword.get(opts, :help, false), do: Commands.Init.help(), else: Commands.Init.run(opts)
+  end
+
+  def handle_command({:check_remote, opts}) do
+    if Keyword.get(opts, :help, false),
+      do: Commands.CheckRemote.help(),
+      else: Commands.CheckRemote.run(opts)
+  end
+
+  def handle_command({:status, opts}) do
+    if Keyword.get(opts, :help, false),
+      do: Commands.Status.help(),
+      else: Commands.Status.run(opts)
+  end
+
   def handle_command({:help, _opts}), do: Commands.Help.run()
 end

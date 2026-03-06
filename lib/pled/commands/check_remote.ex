@@ -4,6 +4,28 @@ defmodule Pled.Commands.CheckRemote do
   """
   alias Pled.{PluginDiff, RemoteChecker}
 
+  def help do
+    IO.puts("""
+    Usage:
+      pled check-remote [options]
+
+    Description:
+      Compares the local plugin snapshot with the current remote version on
+      Bubble.io. Reports any differences without making changes. Useful for
+      checking if someone has edited the plugin in Bubble since your last pull.
+
+    Options:
+      --verbose, -v    Show detailed output
+      --help, -h       Show this help message
+
+    Examples:
+      pled check-remote        Check for remote changes
+      pled check-remote -v     Check with verbose output
+    """)
+
+    :ok
+  end
+
   def run(opts \\ []) do
     _verbose? = Keyword.get(opts, :verbose, false)
 

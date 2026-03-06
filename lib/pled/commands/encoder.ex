@@ -6,6 +6,28 @@ defmodule Pled.Commands.Encoder do
   alias Pled.Commands.Encoder.Action
   alias Pled.UI
 
+  def help do
+    IO.puts("""
+    Usage:
+      pled encode [options]
+
+    Description:
+      Compiles local source files from src/ into dist/plugin.json in the
+      Bubble.io JSON format. This is the encoding step of the push process,
+      run separately when you want to inspect the output without uploading.
+
+    Options:
+      --verbose, -v    Show detailed output
+      --help, -h       Show this help message
+
+    Examples:
+      pled encode            Generate dist/plugin.json from src/ files
+      pled encode -v         Encode with verbose output
+    """)
+
+    :ok
+  end
+
   def encode(opts \\ []) do
     verbose? = Keyword.get(opts, :verbose, false)
     IO.puts("encoding")

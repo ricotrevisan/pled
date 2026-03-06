@@ -5,6 +5,27 @@ defmodule Pled.Commands.Watch do
   """
   alias Pled.UI
 
+  def help do
+    IO.puts("""
+    Usage:
+      pled watch [options]
+
+    Description:
+      Watches the src/ directory for file changes and automatically encodes
+      and pushes the plugin to Bubble.io on each change. Press Ctrl+C to stop.
+
+    Options:
+      --verbose, -v    Show detailed output
+      --help, -h       Show this help message
+
+    Examples:
+      pled watch             Start watching for changes
+      pled watch -v          Watch with verbose output
+    """)
+
+    :ok
+  end
+
   def run(opts \\ []) do
     verbose? = Keyword.get(opts, :verbose, false)
 

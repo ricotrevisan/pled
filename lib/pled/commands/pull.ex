@@ -3,6 +3,29 @@ defmodule Pled.Commands.Pull do
   alias Pled.RemoteChecker
   alias Pled.UI
 
+  def help do
+    IO.puts("""
+    Usage:
+      pled pull [options]
+
+    Description:
+      Fetches the plugin data from Bubble.io and decodes it into local files
+      under the src/ directory. Also saves a remote snapshot for change detection.
+
+    Options:
+      --wipe, -w       Remove src/ and dist/ directories before pulling
+      --verbose, -v    Show detailed output
+      --help, -h       Show this help message
+
+    Examples:
+      pled pull              Fetch and decode plugin files
+      pled pull --wipe       Clean local files before pulling
+      pled pull -w -v        Wipe and pull with verbose output
+    """)
+
+    :ok
+  end
+
   def run(opts) do
     verbose? = Keyword.get(opts, :verbose, false)
     IO.puts("pulling")

@@ -2,6 +2,30 @@ defmodule Pled.Commands.Push do
   alias Pled.Commands.Encoder
   alias Pled.{PluginDiff, RemoteChecker}
 
+  def help do
+    IO.puts("""
+    Usage:
+      pled push [options]
+
+    Description:
+      Encodes local source files into the Bubble.io JSON format and uploads
+      the plugin data. Before pushing, checks for remote changes to avoid
+      overwriting work done in the Bubble editor.
+
+    Options:
+      --force, -f      Skip remote change detection and push immediately
+      --verbose, -v    Show detailed output
+      --help, -h       Show this help message
+
+    Examples:
+      pled push              Encode and push (with remote change check)
+      pled push --force      Push without checking for remote changes
+      pled push -f -v        Force push with verbose output
+    """)
+
+    :ok
+  end
+
   def run(opts) do
     # verbose? = Keyword.get(opts, :verbose, false)
     force? = Keyword.get(opts, :force, false)

@@ -4,6 +4,28 @@ defmodule Pled.Commands.Status do
   """
   alias Pled.{PluginDiff, PluginId, RemoteChecker}
 
+  def help do
+    IO.puts("""
+    Usage:
+      pled status [options]
+
+    Description:
+      Displays environment configuration, authentication status, and sync
+      state. Checks that PLUGIN_ID and BUBBLE_COOKIE are set, verifies the
+      cookie is valid, and compares local files with the remote plugin.
+
+    Options:
+      --verbose, -v    Show detailed output (includes detailed change list)
+      --help, -h       Show this help message
+
+    Examples:
+      pled status            Show current status
+      pled status -v         Show status with detailed change information
+    """)
+
+    :ok
+  end
+
   def run(opts \\ []) do
     verbose? = Keyword.get(opts, :verbose, false)
 

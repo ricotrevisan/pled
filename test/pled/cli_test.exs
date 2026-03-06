@@ -78,6 +78,26 @@ defmodule Pled.CLITest do
       assert Pled.parse_args(["pull", "--wipe=true"]) == {:pull, [wipe: true]}
       assert Pled.parse_args(["pull", "--wipe=false"]) == {:pull, [wipe: false]}
     end
+
+    test "parses 'help <command>' for all commands" do
+      assert Pled.parse_args(["help", "pull"]) == {:pull, [help: true]}
+      assert Pled.parse_args(["help", "push"]) == {:push, [help: true]}
+      assert Pled.parse_args(["help", "encode"]) == {:encode, [help: true]}
+      assert Pled.parse_args(["help", "upload"]) == {:upload, {"", [help: true]}}
+      assert Pled.parse_args(["help", "watch"]) == {:watch, [help: true]}
+      assert Pled.parse_args(["help", "init"]) == {:init, [help: true]}
+      assert Pled.parse_args(["help", "check-remote"]) == {:check_remote, [help: true]}
+      assert Pled.parse_args(["help", "status"]) == {:status, [help: true]}
+    end
+
+    test "parses 'help' with unknown command as general help" do
+      assert Pled.parse_args(["help", "unknown"]) == {:help, []}
+      assert Pled.parse_args(["help", "foobar"]) == {:help, []}
+    end
+
+    test "parses 'help' alone as general help" do
+      assert Pled.parse_args(["help"]) == {:help, []}
+    end
   end
 
   describe "handle_command/1" do

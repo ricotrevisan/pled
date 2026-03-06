@@ -4,6 +4,30 @@ defmodule Pled.Commands.Upload do
   """
   alias Pled.UI
 
+  def help do
+    IO.puts("""
+    Usage:
+      pled upload <file_path> [options]
+
+    Description:
+      Uploads a file to the Bubble.io CDN and adds the resulting CDN URL
+      as an asset entry in src/plugin.json.
+
+    Arguments:
+      <file_path>      Path to the file to upload
+
+    Options:
+      --verbose, -v    Show detailed output
+      --help, -h       Show this help message
+
+    Examples:
+      pled upload lib/dist.js        Upload a bundled JS file
+      pled upload assets/icon.png    Upload an image asset
+    """)
+
+    :ok
+  end
+
   def run(file_path, opts \\ []) do
     verbose? = Keyword.get(opts, :verbose, false)
     IO.puts("uploading")
