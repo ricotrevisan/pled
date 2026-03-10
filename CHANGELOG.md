@@ -16,7 +16,13 @@
 
 ## v0.0.26-beta
 
-- Add PluginId module, status command, and improved init workflow
+- `pled init` now accepts a Bubble plugin URL or ID as argument (e.g.
+  `pled init https://bubble.io/plugin_editor?id=1234x5678`)
+- Add `.plugin_id` file support: replaces `.envrc`/`PLUGIN_ID` env var approach
+- Add `PluginId` module for resolving plugin ID from `.plugin_id` file, env var,
+  or Bubble URLs
+- Add `status` command: shows environment, auth, and sync status
+- Refactor `init` command to save plugin ID to `.plugin_id` instead of `.envrc`
 
 ## v0.0.25-beta
 

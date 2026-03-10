@@ -121,7 +121,54 @@ git tag "v${NEW_VERSION}"
 
 print_info "Created commit: $COMMIT_MSG"
 print_info "Created tag: v${NEW_VERSION}"
-print_info ""
-print_info "To push the changes and tag:"
-print_info "  git push origin main"
-print_info "  git push origin v${NEW_VERSION}"
+
+# Push to remote
+print_info "Pushing to origin..."
+git push origin main
+git push origin "v${NEW_VERSION}"
+
+# Build release binaries
+print_info "Building release binaries..."
+MIX_ENV=prod mix release
+
+# Package binaries into archives (so downloaded file is always "pled")
+print_info "Packaging binaries..."
+ARCHIVE_DIR="burrito_out/archives"
+rm -rf "$ARCHIVE_DIR"
+mkdir -p "$ARCHIVE_DIR"
+
+# Unix platforms → tar.gz
+for f in pled_linux_arm pled_linux_x86 pled_macos_arm pled_macos_x86; do
+    if [ -f "burrito_out/$f" ]; then
+        name="${f/pled_/pled-}"
+        name="${name//_/-}"
+        cp "burrito_out/$f" "burrito_out/pled"
+        chmod +x "burrito_out/pled"
+        tar czf "${ARCHIVE_DIR}/${name}.tar.gz" -C burrito_out pled
+        rm "burrito_out/pled"
+        print_info "  Created ${name}.tar.gz"
+    else
+        print_warn "  Skipping $f (not found)"
+    fi
+done
+
+# Windows → zip
+if [ -f "burrito_out/pled_windows.exe" ]; then
+    cp "burrito_out/pled_windows.exe" "burrito_out/pled.exe"
+    (cd burrito_out && zip -q "archives/pled-windows.zip" pled.exe && rm pled.exe)
+    print_info "  Created pled-windows.zip"
+else
+    print_warn "  Skipping pled_windows.exe (not found)"
+fi
+
+# Create GitHub release and upload archives
+print_info "Creating GitHub release v${NEW_VERSION}..."
+gh release create "v${NEW_VERSION}" \
+    ${ARCHIVE_DIR}/pled-*.tar.gz \
+    ${ARCHIVE_DIR}/pled-*.zip \
+    --title "v${NEW_VERSION}" \
+    --prerelease \
+    --generate-notes
+
+print_info "Release v${NEW_VERSION} published with binaries!"
+print_info "  https://github.com/RicoTrevisan/pled/releases/tag/v${NEW_VERSION}"
