@@ -4,7 +4,7 @@ defmodule Pled.MixProject do
   def project do
     [
       app: :pled,
-      version: "0.0.28-beta",
+      version: "0.0.29-beta",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
