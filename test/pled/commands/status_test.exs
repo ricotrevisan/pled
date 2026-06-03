@@ -11,6 +11,7 @@ defmodule Pled.Commands.StatusTest do
     # Store original env vars
     original_plugin_id = System.get_env("PLUGIN_ID")
     original_cookie = System.get_env("BUBBLE_COOKIE")
+    original_req_options = Application.get_env(:pled, :req_options)
 
     # Clean up test snapshot
     File.rm(@test_snapshot_file)
@@ -34,6 +35,12 @@ defmodule Pled.Commands.StatusTest do
 
       File.rm(@test_snapshot_file)
       Application.delete_env(:pled, :src_snapshot_file)
+
+      if original_req_options do
+        Application.put_env(:pled, :req_options, original_req_options)
+      else
+        Application.delete_env(:pled, :req_options)
+      end
     end)
 
     :ok
@@ -71,13 +78,34 @@ defmodule Pled.Commands.StatusTest do
       assert output =~ "BUBBLE_COOKIE is set"
     end
 
-    test "shows cannot verify auth when env vars missing" do
+    test "does not claim the cookie is valid when public plugin fetch succeeds" do
+      System.put_env("PLUGIN_ID", "test-plugin-id")
+      System.put_env("BUBBLE_COOKIE", "test-cookie")
+
+      Application.put_env(:pled, :req_options,
+        adapter: fn request ->
+          assert request.method == :get
+
+          assert URI.to_string(request.url) ==
+                   "https://bubble.io/appeditor/get_plugin?id=test-plugin-id"
+
+          {request, %Req.Response{status: 200, body: %{}}}
+        end
+      )
+
+      output = capture_io(fn -> Status.run([]) end)
+
+      refute output =~ "Cookie is valid"
+      assert output =~ "Remote plugin is reachable"
+    end
+
+    test "shows cannot check remote when env vars missing" do
       System.delete_env("PLUGIN_ID")
       System.delete_env("BUBBLE_COOKIE")
 
       output = capture_io(fn -> Status.run([]) end)
 
-      assert output =~ "Cannot verify (missing environment variables)"
+      assert output =~ "Cannot check remote (missing environment variables)"
     end
   end
 

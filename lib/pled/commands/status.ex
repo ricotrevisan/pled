@@ -10,9 +10,9 @@ defmodule Pled.Commands.Status do
       pled status [options]
 
     Description:
-      Displays environment configuration, authentication status, and sync
+      Displays environment configuration, remote reachability, and sync
       state. Checks that PLUGIN_ID and BUBBLE_COOKIE are set, verifies the
-      cookie is valid, and compares local files with the remote plugin.
+      remote plugin is reachable, and compares local files with the remote plugin.
 
     Options:
       --verbose, -v    Show detailed output (includes detailed change list)
@@ -34,29 +34,36 @@ defmodule Pled.Commands.Status do
     env_ok = check_environment()
 
     IO.puts("")
-    IO.puts("Authentication:")
+    IO.puts("Remote:")
 
     if env_ok do
-      case check_authentication() do
+      case check_remote_reachable() do
         :ok ->
-          IO.puts("  " <> IO.ANSI.green() <> "✓ Cookie is valid" <> IO.ANSI.reset())
+          IO.puts(
+            "  " <>
+              IO.ANSI.green() <>
+              "✓ Remote plugin is reachable (edit permission is checked on push)" <>
+              IO.ANSI.reset()
+          )
+
           IO.puts("")
           IO.puts("Sync Status:")
           check_sync_status(verbose?)
 
         {:error, reason} ->
-          IO.puts("  " <> IO.ANSI.red() <> "✗ Cookie is invalid or expired" <> IO.ANSI.reset())
+          IO.puts("  " <> IO.ANSI.red() <> "✗ Could not fetch remote plugin" <> IO.ANSI.reset())
 
           if verbose? do
             IO.puts("    #{reason}")
           end
 
-          {:error, :auth_failed}
+          {:error, :remote_fetch_failed}
       end
     else
       IO.puts(
         "  " <>
-          IO.ANSI.yellow() <> "⚠ Cannot verify (missing environment variables)" <> IO.ANSI.reset()
+          IO.ANSI.yellow() <>
+          "⚠ Cannot check remote (missing environment variables)" <> IO.ANSI.reset()
       )
 
       {:error, :missing_env}
@@ -97,7 +104,7 @@ defmodule Pled.Commands.Status do
     plugin_id_ok and cookie_ok
   end
 
-  defp check_authentication do
+  defp check_remote_reachable do
     case Pled.BubbleApi.fetch_plugin() do
       {:ok, _plugin_data} -> :ok
       {:error, reason} -> {:error, reason}

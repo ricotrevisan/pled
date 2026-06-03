@@ -4,6 +4,7 @@ defmodule Pled.BubbleApi do
   """
 
   @base_url "https://bubble.io/appeditor"
+  @save_plugin_url "https://bubble.io/appeditor/save_plugin"
 
   @doc """
   Fetches plugin data from Bubble.io.
@@ -23,7 +24,7 @@ defmodule Pled.BubbleApi do
         {"user-agent", "Pled/0.1.0"}
       ]
 
-      case Req.get(url, headers: headers) do
+      case Req.get(url, Keyword.merge(req_options(), headers: headers)) do
         {:ok, %{status: 200, body: body}} ->
           {:ok, body}
 
@@ -41,8 +42,6 @@ defmodule Pled.BubbleApi do
 
     with {:ok, plugin_id} <- Pled.PluginId.load(),
          {:ok, cookie} <- get_env_var("BUBBLE_COOKIE") do
-      url = "https://bubble.io/appeditor/save_plugin"
-
       headers = [
         {"cookie", cookie},
         {"content-type", "application/json"}
@@ -52,13 +51,21 @@ defmodule Pled.BubbleApi do
 
       body = %{"id" => plugin_id, "raw" => Jason.decode!(content)}
 
-      case Req.post(url, headers: headers, body: Jason.encode!(body)) do
+      case Req.post(
+             @save_plugin_url,
+             Keyword.merge(req_options(), headers: headers, body: Jason.encode!(body))
+           ) do
         {:ok, %{status: 200}} ->
           IO.puts("Plugin uploaded successfully")
           :ok
 
+        {:ok, %{status: 401, body: response_body}} ->
+          message = unauthorized_message(response_body)
+          IO.warn(message)
+          {:error, {:unauthorized, message}}
+
         {:ok, response} ->
-          IO.warn("Plugin uploaded failed")
+          IO.warn("Plugin upload failed")
           IO.warn("Response: #{inspect(response)}")
           {:error, :not_saved}
 
@@ -107,7 +114,10 @@ defmodule Pled.BubbleApi do
         "name" => filename
       }
 
-      case Req.post(url, headers: headers, body: Jason.encode!(body)) do
+      case Req.post(
+             url,
+             Keyword.merge(req_options(), headers: headers, body: Jason.encode!(body))
+           ) do
         {:ok, %{status: 200, body: response_body}} ->
           {:ok, response_body}
 
@@ -120,6 +130,23 @@ defmodule Pled.BubbleApi do
     else
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  defp unauthorized_message(response_body) do
+    bubble_message =
+      case response_body do
+        %{"translation" => translation} when is_binary(translation) -> translation
+        %{"message" => message} when is_binary(message) -> message
+        _ -> "Bubble rejected the upload with HTTP 401 Unauthorized."
+      end
+
+    bubble_message <>
+      " Check that BUBBLE_COOKIE is fresh and belongs to a Bubble user who owns or can edit " <>
+      "the plugin, and verify PLUGIN_ID points at that plugin."
+  end
+
+  defp req_options do
+    Application.get_env(:pled, :req_options, [])
   end
 
   defp get_env_var(name) do

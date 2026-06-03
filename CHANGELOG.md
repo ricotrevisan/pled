@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.0.29-beta
+
+### Fixed
+- Report Bubble `401 Unauthorized` upload failures with actionable guidance for
+  refreshing `BUBBLE_COOKIE` and verifying plugin edit permissions
+- Stop `pled status` from claiming the cookie is valid when the public plugin
+  fetch endpoint succeeds; it now reports remote reachability instead
+
 ## v0.0.28-beta
 
 ### Added

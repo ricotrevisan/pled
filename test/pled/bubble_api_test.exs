@@ -1,7 +1,26 @@
 defmodule Pled.BubbleApiTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Pled.BubbleApi
+
+  setup do
+    previous_plugin_id = System.get_env("PLUGIN_ID")
+    previous_cookie = System.get_env("BUBBLE_COOKIE")
+    previous_req_options = Application.get_env(:pled, :req_options)
+
+    on_exit(fn ->
+      restore_env("PLUGIN_ID", previous_plugin_id)
+      restore_env("BUBBLE_COOKIE", previous_cookie)
+
+      if previous_req_options do
+        Application.put_env(:pled, :req_options, previous_req_options)
+      else
+        Application.delete_env(:pled, :req_options)
+      end
+    end)
+
+    :ok
+  end
 
   describe "fetch_plugin/0" do
     test "returns error when PLUGIN_ID is not available" do
@@ -55,4 +74,53 @@ defmodule Pled.BubbleApiTest do
       assert {:ok, _body} = BubbleApi.fetch_plugin()
     end
   end
+
+  describe "save_plugin/0" do
+    @tag :tmp_dir
+    test "returns an actionable unauthorized error when Bubble rejects edit permission", %{
+      tmp_dir: tmp_dir
+    } do
+      File.mkdir_p!(Path.join(tmp_dir, "dist"))
+      File.write!(Path.join(tmp_dir, "dist/plugin.json"), Jason.encode!(%{"name" => "Test"}))
+
+      System.put_env("PLUGIN_ID", "test_plugin_123")
+      System.put_env("BUBBLE_COOKIE", "session=abc123")
+
+      Application.put_env(:pled, :req_options,
+        adapter: fn request ->
+          assert request.method == :post
+          assert URI.to_string(request.url) == "https://bubble.io/appeditor/save_plugin"
+          assert Req.Request.get_header(request, "cookie") == ["session=abc123"]
+
+          assert Jason.decode!(IO.iodata_to_binary(request.body)) == %{
+                   "id" => "test_plugin_123",
+                   "raw" => %{"name" => "Test"}
+                 }
+
+          response = %Req.Response{
+            status: 401,
+            body: %{
+              "error_class" => "Unauthorized",
+              "translation" => "You don't have permission to edit this plugin."
+            }
+          }
+
+          {request, response}
+        end
+      )
+
+      File.cd!(tmp_dir, fn ->
+        ExUnit.CaptureIO.capture_io(fn ->
+          ExUnit.CaptureIO.capture_io(:stderr, fn ->
+            assert {:error, {:unauthorized, message}} = BubbleApi.save_plugin()
+            assert message =~ "permission"
+            assert message =~ "BUBBLE_COOKIE"
+          end)
+        end)
+      end)
+    end
+  end
+
+  defp restore_env(name, nil), do: System.delete_env(name)
+  defp restore_env(name, value), do: System.put_env(name, value)
 end
