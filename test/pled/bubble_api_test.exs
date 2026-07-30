@@ -7,6 +7,7 @@ defmodule Pled.BubbleApiTest do
     previous_plugin_id = System.get_env("PLUGIN_ID")
     previous_cookie = System.get_env("BUBBLE_COOKIE")
     previous_req_options = Application.get_env(:pled, :req_options)
+    previous_adapter_fun = Application.get_env(:pled, :test_adapter_fun)
 
     on_exit(fn ->
       restore_env("PLUGIN_ID", previous_plugin_id)
@@ -16,6 +17,12 @@ defmodule Pled.BubbleApiTest do
         Application.put_env(:pled, :req_options, previous_req_options)
       else
         Application.delete_env(:pled, :req_options)
+      end
+
+      if previous_adapter_fun do
+        Application.put_env(:pled, :test_adapter_fun, previous_adapter_fun)
+      else
+        Application.delete_env(:pled, :test_adapter_fun)
       end
     end)
 
@@ -86,28 +93,28 @@ defmodule Pled.BubbleApiTest do
       System.put_env("PLUGIN_ID", "test_plugin_123")
       System.put_env("BUBBLE_COOKIE", "session=abc123")
 
-      Application.put_env(:pled, :req_options,
-        adapter: fn request ->
-          assert request.method == :post
-          assert URI.to_string(request.url) == "https://bubble.io/appeditor/save_plugin"
-          assert Req.Request.get_header(request, "cookie") == ["session=abc123"]
+      Application.put_env(:pled, :req_options, adapter: Pled.TestAdapter)
 
-          assert Jason.decode!(IO.iodata_to_binary(request.body)) == %{
-                   "id" => "test_plugin_123",
-                   "raw" => %{"name" => "Test"}
-                 }
+      Application.put_env(:pled, :test_adapter_fun, fn request ->
+        assert request.method == :post
+        assert URI.to_string(request.url) == "https://bubble.io/appeditor/save_plugin"
+        assert Req.Request.get_header(request, "cookie") == ["session=abc123"]
 
-          response = %Req.Response{
-            status: 401,
-            body: %{
-              "error_class" => "Unauthorized",
-              "translation" => "You don't have permission to edit this plugin."
-            }
+        assert Jason.decode!(IO.iodata_to_binary(request.body)) == %{
+                 "id" => "test_plugin_123",
+                 "raw" => %{"name" => "Test"}
+               }
+
+        response = %Req.Response{
+          status: 401,
+          body: %{
+            "error_class" => "Unauthorized",
+            "translation" => "You don't have permission to edit this plugin."
           }
+        }
 
-          {request, response}
-        end
-      )
+        {request, response}
+      end)
 
       File.cd!(tmp_dir, fn ->
         ExUnit.CaptureIO.capture_io(fn ->

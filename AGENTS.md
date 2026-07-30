@@ -58,8 +58,9 @@ It is recommended to use a tool like `direnv` to manage these variables on a per
 
 ### 5.1. Dependencies
 
-*   Elixir >= 1.18
+*   Elixir >= 1.20 (with Erlang/OTP 29; pinned in `.tool-versions`)
 *   mix (Elixir's build tool)
+*   Zig (pinned in `.tool-versions`; required by Burrito when running `mix release`)
 
 ### 5.2. Installation
 

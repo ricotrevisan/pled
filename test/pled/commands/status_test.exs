@@ -12,6 +12,7 @@ defmodule Pled.Commands.StatusTest do
     original_plugin_id = System.get_env("PLUGIN_ID")
     original_cookie = System.get_env("BUBBLE_COOKIE")
     original_req_options = Application.get_env(:pled, :req_options)
+    original_adapter_fun = Application.get_env(:pled, :test_adapter_fun)
 
     # Clean up test snapshot
     File.rm(@test_snapshot_file)
@@ -40,6 +41,12 @@ defmodule Pled.Commands.StatusTest do
         Application.put_env(:pled, :req_options, original_req_options)
       else
         Application.delete_env(:pled, :req_options)
+      end
+
+      if original_adapter_fun do
+        Application.put_env(:pled, :test_adapter_fun, original_adapter_fun)
+      else
+        Application.delete_env(:pled, :test_adapter_fun)
       end
     end)
 
@@ -82,16 +89,16 @@ defmodule Pled.Commands.StatusTest do
       System.put_env("PLUGIN_ID", "test-plugin-id")
       System.put_env("BUBBLE_COOKIE", "test-cookie")
 
-      Application.put_env(:pled, :req_options,
-        adapter: fn request ->
-          assert request.method == :get
+      Application.put_env(:pled, :req_options, adapter: Pled.TestAdapter)
 
-          assert URI.to_string(request.url) ==
-                   "https://bubble.io/appeditor/get_plugin?id=test-plugin-id"
+      Application.put_env(:pled, :test_adapter_fun, fn request ->
+        assert request.method == :get
 
-          {request, %Req.Response{status: 200, body: %{}}}
-        end
-      )
+        assert URI.to_string(request.url) ==
+                 "https://bubble.io/appeditor/get_plugin?id=test-plugin-id"
+
+        {request, %Req.Response{status: 200, body: %{}}}
+      end)
 
       output = capture_io(fn -> Status.run([]) end)
 

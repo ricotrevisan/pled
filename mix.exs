@@ -5,7 +5,7 @@ defmodule Pled.MixProject do
     [
       app: :pled,
       version: "0.0.29-beta",
-      elixir: "~> 1.18",
+      elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       releases: releases(),
@@ -27,8 +27,8 @@ defmodule Pled.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:req, "~> 0.5.4"},
-      {:burrito, "~> 1.0"},
+      {:req, "~> 0.7.1"},
+      {:burrito, "~> 1.6"},
       {:slugify, "~> 1.3"},
       {:file_system, "~> 1.0"},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false}
