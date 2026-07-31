@@ -22,6 +22,9 @@ pled-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+# Agent scratch workspace (drafts, prototypes, handoffs)
+.scratch/
+
 dist*
 src*
 

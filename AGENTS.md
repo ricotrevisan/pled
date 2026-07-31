@@ -95,3 +95,17 @@ It is recommended to use a tool like `direnv` to manage these variables on a per
 *   `priv/`: Private data, such as example files for tests.
 *   `dist/`: The output directory for the `encode` command.
 *   `burrito_out/`: The output directory for the release executables created by Burrito.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues on `ricotrevisan/pled`, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical labels, spelled as-is (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
