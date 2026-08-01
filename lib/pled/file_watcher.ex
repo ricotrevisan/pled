@@ -106,7 +106,7 @@ defmodule Pled.FileWatcher do
             IO.ANSI.cyan() <> "🔄 Remote changes detected during watch mode" <> IO.ANSI.reset()
           )
 
-          format_remote_changes(diff)
+          IO.puts(Pled.DiffFormatter.format(diff))
           IO.puts("Pulling remote changes...")
 
           case Pled.Commands.Pull.run([]) do
@@ -174,15 +174,4 @@ defmodule Pled.FileWatcher do
 
   defp format_error(error) when is_binary(error), do: error
   defp format_error(error), do: inspect(error)
-
-  defp format_remote_changes(%Pled.PluginDiff{} = diff) do
-    diff.summary
-    |> Enum.sort_by(fn {type, _count} -> Atom.to_string(type) end)
-    |> Enum.each(fn {type, count} ->
-      type_label =
-        type |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
-
-      IO.puts("  • #{count} × #{type_label}")
-    end)
-  end
 end

@@ -10,8 +10,9 @@ defmodule Pled.Commands.Help do
     Usage:
       pled init <url|id>    Initialize project with a Bubble plugin URL or ID
       pled pull             Fetch plugin from Bubble.io and save to src/plugin.json
+      pled pull --wipe      Discard local changes and pull
       pled push             Encodes and then upload plugin to Bubble.io
-      pled push --force     Force push, skipping remote change detection
+      pled push --force     Force push, overwriting remote changes
       pled encode           Prepares the files to upload. Compiles src/ files into dist/plugin.json
       pled upload <file>    Upload a file to Bubble.io CDN
       pled watch            Watches the `src/` directory for changes and pushes to Bubble
