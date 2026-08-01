@@ -7,6 +7,8 @@ defmodule Pled.JsAst do
   comparisons.
   """
 
+  @cache_key {__MODULE__, :parse_cache}
+
   @typedoc """
   Structured error returned when parsing fails.
   """
@@ -22,7 +24,44 @@ defmodule Pled.JsAst do
   @spec parse(String.t(), keyword()) :: {:ok, map()} | {:error, parse_error}
   def parse(source, opts \\ []) when is_binary(source) do
     runner = Application.get_env(:pled, :js_ast_runner, {__MODULE__, :node_runner})
-    invoke_runner(runner, source, opts)
+    cache_key = {source, Keyword.get(opts, :module?, false)}
+
+    case Process.get(@cache_key) do
+      %{} = cache ->
+        case Map.fetch(cache, cache_key) do
+          {:ok, result} -> result
+          :error -> parse_and_cache(cache, cache_key, runner, source, opts)
+        end
+
+      nil ->
+        invoke_runner(runner, source, opts)
+    end
+  end
+
+  @doc """
+  Reuses parse results for duplicate sources while `fun` runs in the current process.
+  """
+  @spec with_cache((-> result)) :: result when result: term()
+  def with_cache(fun) when is_function(fun, 0) do
+    case Process.get(@cache_key) do
+      nil ->
+        Process.put(@cache_key, %{})
+
+        try do
+          fun.()
+        after
+          Process.delete(@cache_key)
+        end
+
+      %{} ->
+        fun.()
+    end
+  end
+
+  defp parse_and_cache(cache, cache_key, runner, source, opts) do
+    result = invoke_runner(runner, source, opts)
+    Process.put(@cache_key, Map.put(cache, cache_key, result))
+    result
   end
 
   defp invoke_runner({module, fun}, source, opts) when is_atom(module) and is_atom(fun) do

@@ -17,8 +17,13 @@ defmodule Pled.Commands.StatusTest do
     # Clean up test snapshot
     File.rm(@test_snapshot_file)
 
-    # Replace snapshot file path for testing
+    # Replace external seams for testing
     Application.put_env(:pled, :src_snapshot_file, @test_snapshot_file)
+    Application.put_env(:pled, :req_options, adapter: Pled.TestAdapter)
+
+    Application.put_env(:pled, :test_adapter_fun, fn request ->
+      {request, %Req.Response{status: 400, body: %{"error" => "test stub"}}}
+    end)
 
     on_exit(fn ->
       # Restore env vars
@@ -85,9 +90,16 @@ defmodule Pled.Commands.StatusTest do
       assert output =~ "BUBBLE_COOKIE is set"
     end
 
-    test "does not claim the cookie is valid when public plugin fetch succeeds" do
+    @tag :tmp_dir
+    test "does not claim the cookie is valid when public plugin fetch succeeds", %{
+      tmp_dir: tmp_dir
+    } do
       System.put_env("PLUGIN_ID", "test-plugin-id")
       System.put_env("BUBBLE_COOKIE", "test-cookie")
+
+      File.mkdir_p!(Path.join(tmp_dir, "src"))
+      File.write!(Path.join([tmp_dir, "src", "plugin.json"]), "{}")
+      File.write!(Path.join(tmp_dir, @test_snapshot_file), "{}")
 
       Application.put_env(:pled, :req_options, adapter: Pled.TestAdapter)
 
@@ -100,7 +112,7 @@ defmodule Pled.Commands.StatusTest do
         {request, %Req.Response{status: 200, body: %{}}}
       end)
 
-      output = capture_io(fn -> Status.run([]) end)
+      output = capture_io(fn -> File.cd!(tmp_dir, fn -> Status.run([]) end) end)
 
       refute output =~ "Cookie is valid"
       assert output =~ "Remote plugin is reachable"
@@ -113,25 +125,6 @@ defmodule Pled.Commands.StatusTest do
       output = capture_io(fn -> Status.run([]) end)
 
       assert output =~ "Cannot check remote (missing environment variables)"
-    end
-  end
-
-  describe "run/1 sync status" do
-    test "shows no baseline found when snapshot doesn't exist" do
-      System.put_env("PLUGIN_ID", "test-plugin-id")
-      System.put_env("BUBBLE_COOKIE", "invalid-cookie-for-test")
-
-      # Force snapshot to not exist
-      File.rm(@test_snapshot_file)
-
-      output =
-        capture_io(fn ->
-          # This will fail at auth, but we're testing the structure
-          Status.run([])
-        end)
-
-      # Auth will fail with invalid cookie, so we won't reach sync status
-      assert output =~ "Environment:" or output =~ "Authentication:"
     end
   end
 

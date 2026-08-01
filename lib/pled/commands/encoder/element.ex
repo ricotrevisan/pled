@@ -74,8 +74,8 @@ defmodule Pled.Commands.Encoder.Element do
       |> Map.merge(generate_code_block(element_dir))
       |> generate_html_headers(element_dir)
 
-    with {:ok, json, field_issues} <- update_element_fields(json, element_dir),
-         {:ok, json, action_issues} <- update_element_actions_js(json, element_dir) do
+    with {:ok, json, field_issues} <- update_element_fields(json, element_dir, opts),
+         {:ok, json, action_issues} <- update_element_actions_js(json, element_dir, opts) do
       {:ok, {key, json}, field_issues ++ action_issues}
     end
   end
@@ -148,11 +148,12 @@ defmodule Pled.Commands.Encoder.Element do
     }
   end
 
-  def update_element_actions_js(json, element_dir) do
+  def update_element_actions_js(json, element_dir, opts \\ []) do
     actions_dir = Path.join(element_dir, "actions")
+    verbose? = Keyword.get(opts, :verbose, false)
 
     if File.exists?(actions_dir) and Map.has_key?(json, "actions") do
-      IO.puts("updating element actions from #{actions_dir}")
+      UI.info("updating element actions from #{actions_dir}", verbose?)
 
       existing_actions = json["actions"]
 
@@ -379,11 +380,12 @@ defmodule Pled.Commands.Encoder.Element do
   end
 
   # Field reordering functionality
-  def update_element_fields(json, element_dir) do
+  def update_element_fields(json, element_dir, opts \\ []) do
     fields_path = Path.join(element_dir, "fields.txt")
+    verbose? = Keyword.get(opts, :verbose, false)
 
     if File.exists?(fields_path) do
-      IO.puts("updating element fields from #{fields_path}")
+      UI.info("updating element fields from #{fields_path}", verbose?)
 
       case File.read(fields_path) do
         {:ok, fields_content} ->
@@ -391,7 +393,7 @@ defmodule Pled.Commands.Encoder.Element do
           existing_fields = Map.get(json, "fields", %{})
 
           if map_size(existing_fields) == 0 do
-            case restore_original_fields(element_dir) do
+            case restore_original_fields(element_dir, verbose?) do
               {:ok, original_fields} ->
                 process_fields_update(json, fields_content, original_fields, element_dir)
 
@@ -410,7 +412,7 @@ defmodule Pled.Commands.Encoder.Element do
     end
   end
 
-  defp restore_original_fields(element_dir) do
+  defp restore_original_fields(element_dir, verbose?) do
     # Read the preserved original plugin.json to get the full field definitions
     # element_dir is like "src/elements/tiptap-AAC", so we need to go up to "src" level
     plugin_path =
@@ -426,7 +428,7 @@ defmodule Pled.Commands.Encoder.Element do
          {:ok, plugin_data} <- Jason.decode(plugin_content),
          %{} = original_fields <-
            get_in(plugin_data, ["plugin_elements", element_key, "fields"]) do
-      IO.puts("Restoring fields from original plugin data for element #{element_key}")
+      UI.info("Restoring fields from original plugin data for element #{element_key}", verbose?)
       {:ok, original_fields}
     else
       _ ->

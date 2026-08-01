@@ -1,8 +1,9 @@
 defmodule Pled.Commands.Status do
   @moduledoc """
-  Command to display environment, authentication, and sync status.
+  Command to display environment, remote reachability, and sync status.
   """
-  alias Pled.{PluginDiff, PluginId, RemoteChecker}
+
+  alias Pled.{DiffFormatter, PluginId, Sync}
 
   def help do
     IO.puts("""
@@ -10,9 +11,8 @@ defmodule Pled.Commands.Status do
       pled status [options]
 
     Description:
-      Displays environment configuration, remote reachability, and sync
-      state. Checks that PLUGIN_ID and BUBBLE_COOKIE are set, verifies the
-      remote plugin is reachable, and compares local files with the remote plugin.
+      Displays environment configuration, remote reachability, and the
+      three-way sync state of the baseline, local source, and Bubble plugin.
 
     Options:
       --verbose, -v    Show detailed output (includes detailed change list)
@@ -37,28 +37,7 @@ defmodule Pled.Commands.Status do
     IO.puts("Remote:")
 
     if env_ok do
-      case check_remote_reachable() do
-        :ok ->
-          IO.puts(
-            "  " <>
-              IO.ANSI.green() <>
-              "✓ Remote plugin is reachable (edit permission is checked on push)" <>
-              IO.ANSI.reset()
-          )
-
-          IO.puts("")
-          IO.puts("Sync Status:")
-          check_sync_status(verbose?)
-
-        {:error, reason} ->
-          IO.puts("  " <> IO.ANSI.red() <> "✗ Could not fetch remote plugin" <> IO.ANSI.reset())
-
-          if verbose? do
-            IO.puts("    #{reason}")
-          end
-
-          {:error, :remote_fetch_failed}
-      end
+      check_sync_status(verbose?)
     else
       IO.puts(
         "  " <>
@@ -104,74 +83,36 @@ defmodule Pled.Commands.Status do
     plugin_id_ok and cookie_ok
   end
 
-  defp check_remote_reachable do
-    case Pled.BubbleApi.fetch_plugin() do
-      {:ok, _plugin_data} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
   defp check_sync_status(verbose?) do
-    if RemoteChecker.snapshot_exists?() do
-      case RemoteChecker.check_remote_changes() do
-        :no_changes ->
-          IO.puts("  " <> IO.ANSI.green() <> "✓ Local matches remote" <> IO.ANSI.reset())
-          :ok
+    case Sync.status() do
+      {:ok, sync} ->
+        print_remote_reachable()
+        IO.puts("")
+        IO.puts("Sync Status:")
+        IO.puts(DiffFormatter.format_sync(sync, detailed: verbose?))
+        :ok
 
-        {:changes_detected, %PluginDiff{} = diff} ->
-          IO.puts("  " <> IO.ANSI.yellow() <> "⚠ Local differs from remote" <> IO.ANSI.reset())
-          print_summary(diff.summary)
+      {:error, {:remote_unreachable, reason} = error} ->
+        IO.puts("  " <> IO.ANSI.red() <> "✗ Could not fetch remote plugin" <> IO.ANSI.reset())
+        if verbose?, do: IO.puts("    #{reason}")
+        {:error, error}
 
-          if verbose? do
-            IO.puts("")
-            print_detailed_changes(diff.changes)
-          end
-
-          :ok
-
-        {:error, reason} ->
-          IO.puts("  " <> IO.ANSI.red() <> "✗ Failed to check: #{reason}" <> IO.ANSI.reset())
-          {:error, reason}
-      end
-    else
-      IO.puts(
-        "  " <>
-          IO.ANSI.yellow() <> "⚠ No baseline found (run 'pled pull' first)" <> IO.ANSI.reset()
-      )
-
-      :ok
+      {:error, reason} ->
+        print_remote_reachable()
+        IO.puts("")
+        IO.puts("Sync Status:")
+        IO.puts("  " <> IO.ANSI.red() <> "✗ Could not determine sync status" <> IO.ANSI.reset())
+        IO.puts("    #{reason}")
+        {:error, reason}
     end
   end
 
-  defp print_summary(summary) when map_size(summary) == 0, do: :ok
-
-  defp print_summary(summary) do
-    summary
-    |> Enum.sort_by(fn {type, _count} -> Atom.to_string(type) end)
-    |> Enum.each(fn {type, count} ->
-      IO.puts("    • #{count} × #{humanize_type(type)}")
-    end)
-  end
-
-  defp print_detailed_changes(changes) do
-    IO.puts("  Detailed changes:")
-
-    changes
-    |> Enum.with_index(1)
-    |> Enum.each(fn {change, idx} ->
-      IO.puts("    #{idx}. #{describe_change(change)}")
-    end)
-  end
-
-  defp describe_change(%PluginDiff.Change{} = change) do
-    location = Enum.join(change.path, ".")
-    "[#{humanize_type(change.type)}] #{location}"
-  end
-
-  defp humanize_type(type) do
-    type
-    |> Atom.to_string()
-    |> String.replace("_", " ")
-    |> String.capitalize()
+  defp print_remote_reachable do
+    IO.puts(
+      "  " <>
+        IO.ANSI.green() <>
+        "✓ Remote plugin is reachable (edit permission is checked on push)" <>
+        IO.ANSI.reset()
+    )
   end
 end

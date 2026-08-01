@@ -1,7 +1,25 @@
 defmodule Pled.PluginDiffTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Pled.PluginDiff
+
+  setup do
+    previous = Application.get_env(:pled, :js_ast_runner)
+
+    Application.put_env(:pled, :js_ast_runner, fn source, _opts ->
+      {:ok, %{"normalized" => String.replace(source, ~r/\s+/, "")}}
+    end)
+
+    on_exit(fn ->
+      if is_nil(previous) do
+        Application.delete_env(:pled, :js_ast_runner)
+      else
+        Application.put_env(:pled, :js_ast_runner, previous)
+      end
+    end)
+
+    :ok
+  end
 
   describe "diff/2" do
     test "reports metadata field drift" do
@@ -44,6 +62,8 @@ defmodule Pled.PluginDiffTest do
 
       diff = PluginDiff.diff(a, b)
 
+      assert diff.summary == %{element_field_changed: 1}
+
       assert Enum.any?(diff.changes, fn change ->
                change.type == :element_field_changed and
                  change.path == [
@@ -58,6 +78,22 @@ defmodule Pled.PluginDiffTest do
                  change.before == "function(instance) { return instance; }" and
                  change.after == "function(instance) { return 42; }"
              end)
+
+      refute Enum.any?(diff.changes, &(List.last(&1.path) == "raw_hash"))
+    end
+
+    test "ignores code wrapper whitespace when canonical fingerprints match" do
+      a = base_plugin()
+
+      b =
+        put_in(
+          a,
+          ["plugin_elements", "alpha", "code", "initialize", "fn"],
+          "function ( instance ) {\n  return instance;\n}"
+        )
+
+      refute a == b
+      refute PluginDiff.changed?(PluginDiff.diff(a, b))
     end
   end
 

@@ -151,6 +151,35 @@ defmodule Pled.PluginDiff do
 
   defp diff_value(changes, value, value, _path, _type, _meta), do: changes
 
+  defp diff_value(
+         changes,
+         %{"__type" => "code_block"} = left,
+         %{"__type" => "code_block"} = right,
+         path,
+         type,
+         meta
+       ) do
+    cond do
+      left["fingerprint"] == right["fingerprint"] ->
+        changes
+
+      left["raw"] != right["raw"] ->
+        diff_value(changes, left["raw"], right["raw"], path ++ ["raw"], type, meta)
+
+      true ->
+        [
+          change(
+            type,
+            path ++ ["fingerprint"],
+            left["fingerprint"],
+            right["fingerprint"],
+            meta
+          )
+          | changes
+        ]
+    end
+  end
+
   defp diff_value(changes, %{} = left, %{} = right, path, type, meta) do
     diff_map(changes, left, right, path, type, meta)
   end
