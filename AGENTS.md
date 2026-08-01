@@ -77,7 +77,7 @@ It is recommended to use a tool like `direnv` to manage these variables on a per
 
 ## 6. Available Commands
 
-*   `pull`: Fetches the plugin data from Bubble.io and decodes it into local files.
+*   `pull`: Fetches the plugin data from Bubble.io and decodes it into local files. Refuses when local changes are unpushed unless `--wipe`; removes entities deleted or renamed in Bubble.
 *   `push`: Encodes local files and pushes the changes to Bubble.io.
 *   `encode`: Encodes the plugin files into `dist/plugin.json`.
 *   `upload <file_path>`: Uploads a specific JSON file to Bubble.io.

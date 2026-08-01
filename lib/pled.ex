@@ -137,7 +137,14 @@ defmodule Pled do
   end
 
   def handle_command({:pull, opts}) do
-    if Keyword.get(opts, :help, false), do: Commands.Pull.help(), else: Commands.Pull.run(opts)
+    if Keyword.get(opts, :help, false) do
+      Commands.Pull.help()
+    else
+      case Commands.Pull.run(opts) do
+        {:error, reason} -> {:error, {:reported, reason}}
+        result -> result
+      end
+    end
   end
 
   def handle_command({:push, opts}) do

@@ -3,6 +3,7 @@ defmodule Pled.Commands.Decoder do
     decode_elements(plugin_data, base_dir)
     decode_actions(plugin_data, base_dir)
     decode_html_header(plugin_data, base_dir)
+    prune_removed_entities(plugin_data, base_dir)
     clean_plugin_data(base_dir)
     :ok
   rescue
@@ -13,6 +14,66 @@ defmodule Pled.Commands.Decoder do
 
   defp slug_or_key(display, key) do
     (display && Slug.slugify(display)) || Slug.slugify(key) || key
+  end
+
+  # The prune below must build names exactly like the writes do, or it deletes
+  # live entities.
+  defp entity_dir_name(display, key), do: "#{slug_or_key(display, key)}-#{key}"
+
+  # Entities deleted or renamed in Bubble must not survive locally, or the next
+  # push would resurrect them.
+  defp prune_removed_entities(plugin_data, base_dir) do
+    elements = collection(plugin_data, "plugin_elements")
+    elements_dir = Path.join([base_dir, "src", "elements"])
+
+    prune_dirs(elements_dir, entity_dir_names(elements, "display"))
+
+    prune_dirs(
+      Path.join([base_dir, "src", "actions"]),
+      entity_dir_names(collection(plugin_data, "plugin_actions"), "display")
+    )
+
+    Enum.each(elements, fn {key, element_data} ->
+      element_dir = Path.join(elements_dir, entity_dir_name(element_data["display"], key))
+
+      prune_js_files(
+        Path.join(element_dir, "actions"),
+        element_data
+        |> Map.get("actions")
+        |> Kernel.||(%{})
+        |> MapSet.new(fn {key, data} -> entity_dir_name(data["caption"], key) <> ".js" end)
+      )
+    end)
+  end
+
+  defp collection(plugin_data, key), do: Map.get(plugin_data, key) || %{}
+
+  defp entity_dir_names(entities, name_field) do
+    MapSet.new(entities, fn {key, data} -> entity_dir_name(data[name_field], key) end)
+  end
+
+  defp prune_dirs(dir, keep) do
+    prune(dir, keep, &File.dir?/1)
+  end
+
+  defp prune_js_files(dir, keep) do
+    prune(dir, keep, &String.ends_with?(&1, ".js"))
+  end
+
+  # Only entries pled itself writes are removable; anything else the user keeps
+  # here is left alone.
+  defp prune(dir, keep, removable?) do
+    case File.ls(dir) do
+      {:ok, entries} ->
+        entries
+        |> Enum.reject(&MapSet.member?(keep, &1))
+        |> Enum.map(&Path.join(dir, &1))
+        |> Enum.filter(removable?)
+        |> Enum.each(&File.rm_rf!/1)
+
+      {:error, _reason} ->
+        :ok
+    end
   end
 
   def clean_plugin_data(base_dir) do
@@ -51,7 +112,7 @@ defmodule Pled.Commands.Decoder do
   defp decode_action({key, action_data}, actions_dir) do
     name = slug_or_key(Map.get(action_data, "display"), key)
 
-    action_dir = Path.join(actions_dir, "#{name}-#{key}")
+    action_dir = Path.join(actions_dir, entity_dir_name(Map.get(action_data, "display"), key))
     File.mkdir_p!(action_dir)
 
     ["client", "server"]
@@ -103,9 +164,7 @@ defmodule Pled.Commands.Decoder do
   end
 
   defp decode_element({key, element_data}, elements_dir) do
-    name = slug_or_key(Map.get(element_data, "display"), key)
-
-    element_dir = Path.join(elements_dir, "#{name}-#{key}")
+    element_dir = Path.join(elements_dir, entity_dir_name(Map.get(element_data, "display"), key))
 
     File.mkdir_p!(element_dir)
 
@@ -190,7 +249,7 @@ defmodule Pled.Commands.Decoder do
 
       actions
       |> Enum.each(fn {key, action_data} ->
-        name = slug_or_key(action_data["caption"], key)
+        file_name = entity_dir_name(action_data["caption"], key) <> ".js"
 
         # Store only the JS content for easier editing. The encoder rejects
         # empty action files, so a missing code section gets a placeholder.
@@ -203,7 +262,7 @@ defmodule Pled.Commands.Decoder do
           if content in [nil, ""], do: "// missing action code in remote plugin", else: content
 
         actions_dir
-        |> Path.join("#{name}-#{key}.js")
+        |> Path.join(file_name)
         |> File.write!(content)
       end)
     end
