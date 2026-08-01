@@ -68,10 +68,16 @@ defmodule Pled.Commands.Pull do
                 UI.info("Warning: Failed to save remote snapshot: #{reason}", verbose?)
             end
 
-            Decoder.decode(plugin_data, File.cwd!())
-            UI.info("Plugin data saved to #{plugin_file}", verbose?)
-            IO.puts("Pull completed")
-            :ok
+            case Decoder.decode(plugin_data, File.cwd!()) do
+              :ok ->
+                UI.info("Plugin data saved to #{plugin_file}", verbose?)
+                IO.puts("Pull completed")
+                :ok
+
+              {:error, reason} ->
+                IO.puts("Pull failed: #{reason}")
+                {:error, reason}
+            end
 
           {:error, reason} ->
             IO.puts("Pull failed: #{reason}")

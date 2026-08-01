@@ -1,12 +1,18 @@
 defmodule Pled.Commands.Decoder do
   def decode(plugin_data, base_dir \\ File.cwd!()) do
-    # Preserve original plugin data for field restoration
-
     decode_elements(plugin_data, base_dir)
     decode_actions(plugin_data, base_dir)
     decode_html_header(plugin_data, base_dir)
     clean_plugin_data(base_dir)
     :ok
+  rescue
+    # All writes below use the bang variants; any failed write aborts the
+    # decode with an error naming the file instead of silently skipping.
+    e in File.Error -> {:error, Exception.message(e)}
+  end
+
+  defp slug_or_key(display, key) do
+    (display && Slug.slugify(display)) || Slug.slugify(key) || key
   end
 
   def clean_plugin_data(base_dir) do
@@ -30,7 +36,7 @@ defmodule Pled.Commands.Decoder do
 
       snippet ->
         html_path = Path.join([base_dir, "src", "shared.html"])
-        File.write(html_path, snippet)
+        File.write!(html_path, snippet)
     end
   end
 
@@ -43,24 +49,18 @@ defmodule Pled.Commands.Decoder do
   end
 
   defp decode_action({key, action_data}, actions_dir) do
-    name =
-      action_data
-      |> Map.get("display")
-      |> Slug.slugify()
+    name = slug_or_key(Map.get(action_data, "display"), key)
 
     action_dir = Path.join(actions_dir, "#{name}-#{key}")
     File.mkdir_p!(action_dir)
 
     ["client", "server"]
     |> Enum.each(fn func ->
-      content =
-        action_data
-        |> get_in(["code", func, "fn"])
-        |> remove_bubbleisms()
-
-      action_dir
-      |> Path.join("#{func}.js")
-      |> File.write(content)
+      case action_data |> get_in(["code", func, "fn"]) |> remove_bubbleisms() do
+        # no such code section on the remote: absence is valid, skip the file
+        nil -> :ok
+        content -> action_dir |> Path.join("#{func}.js") |> File.write!(content)
+      end
     end)
 
     clean_action_data(name, action_data, action_dir)
@@ -72,7 +72,7 @@ defmodule Pled.Commands.Decoder do
     # Keep the function signature (async or not) so the encoder can rebuild
     # the exact remote wrapper; the body lives in server.js / client.js.
     code_data =
-      Enum.reduce(["server", "client"], action_data["code"], fn func, code ->
+      Enum.reduce(["server", "client"], action_data["code"] || %{}, fn func, code ->
         case code do
           %{^func => %{"fn" => fn_src} = block} when is_binary(fn_src) ->
             case Pled.CodeBlock.signature(fn_src) do
@@ -88,7 +88,7 @@ defmodule Pled.Commands.Decoder do
     updated_action_data =
       Map.put(action_data, "code", code_data)
 
-    File.write(file_path, Jason.encode!(updated_action_data, pretty: true))
+    File.write!(file_path, Jason.encode!(updated_action_data, pretty: true))
   end
 
   #
@@ -103,14 +103,11 @@ defmodule Pled.Commands.Decoder do
   end
 
   defp decode_element({key, element_data}, elements_dir) do
-    name = Map.get(element_data, "display") |> Slug.slugify()
+    name = slug_or_key(Map.get(element_data, "display"), key)
 
     element_dir = Path.join(elements_dir, "#{name}-#{key}")
 
     File.mkdir_p!(element_dir)
-
-    # write the key name to the directory
-    # File.write("#{element_dir}/.key", key)
 
     decode_element_html_header(element_data, element_dir)
     decode_element_functions(element_data, element_dir)
@@ -139,7 +136,7 @@ defmodule Pled.Commands.Decoder do
       |> Map.drop(["code", "headers"])
       |> Map.put("actions", actions)
 
-    File.write(path, Jason.encode!(cleaned_element_data, pretty: true))
+    File.write!(path, Jason.encode!(cleaned_element_data, pretty: true))
   end
 
   def decode_element_fields(element_data, element_dir) do
@@ -157,7 +154,7 @@ defmodule Pled.Commands.Decoder do
           fields
           |> Enum.sort_by(fn {_key, fields} -> fields["rank"] end)
           |> Enum.map(fn {key, fields} ->
-            fields["caption"] <> " (#{key})"
+            (fields["caption"] || key) <> " (#{key})"
           end)
           |> Enum.join("\n")
 
@@ -171,6 +168,8 @@ defmodule Pled.Commands.Decoder do
   def decode_element_functions(element_data, element_dir) do
     ["initialize", "preview", "reset", "update"]
     |> Enum.each(fn func ->
+      # the encoder requires all four files, so a missing code section
+      # becomes an empty placeholder
       content =
         element_data
         |> get_in(["code", func, "fn"])
@@ -178,7 +177,7 @@ defmodule Pled.Commands.Decoder do
 
       element_dir
       |> Path.join("#{func}.js")
-      |> File.write(content)
+      |> File.write!(content || "")
     end)
   end
 
@@ -191,28 +190,30 @@ defmodule Pled.Commands.Decoder do
 
       actions
       |> Enum.each(fn {key, action_data} ->
-        name = action_data["caption"] |> Slug.slugify()
+        name = slug_or_key(action_data["caption"], key)
 
-        # Store only the JS content for easier editing
+        # Store only the JS content for easier editing. The encoder rejects
+        # empty action files, so a missing code section gets a placeholder.
         content =
           action_data
           |> get_in(["code", "fn"])
           |> remove_bubbleisms()
 
+        content =
+          if content in [nil, ""], do: "// missing action code in remote plugin", else: content
+
         actions_dir
         |> Path.join("#{name}-#{key}.js")
-        |> File.write(content)
+        |> File.write!(content)
       end)
     end
   end
 
   def decode_element_html_header(element_data, element_dir) do
-    html =
-      element_data
-      |> get_in(["headers", "snippet"])
-
-    html_path = Path.join(element_dir, "headers.html")
-    File.write(html_path, html)
+    case get_in(element_data, ["headers", "snippet"]) do
+      nil -> :ok
+      html -> element_dir |> Path.join("headers.html") |> File.write!(html)
+    end
   end
 
   def remove_bubbleisms(nil), do: nil

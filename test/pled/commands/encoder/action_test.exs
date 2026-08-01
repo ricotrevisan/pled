@@ -154,41 +154,20 @@ defmodule Pled.Commands.Encoder.ActionTest do
       assert encoded_action["code"]["package_hash"] == action_json["code"]["package_hash"]
     end
 
-    test "handles missing JS files", %{
+    test "fails when the json has code sections but the JS files are missing", %{
       src_json: src_json,
       opts: opts,
-      action_dir: action_dir,
-      action_json: action_json
+      action_dir: action_dir
     } do
       import ExUnit.CaptureIO
 
-      # Delete JS files
+      # Deleting the JS files must not silently drop the code from the payload
       File.rm!(Path.join(action_dir, "server.js"))
       File.rm!(Path.join(action_dir, "client.js"))
 
-      _output =
-        capture_io(fn ->
-          result = Action.encode_actions(src_json, opts)
-          send(self(), {:result, result})
-        end)
-
-      assert_received {:result, result}
-
-      # Should preserve non-function properties when JS files are missing
-      encoded_action = result["plugin_actions"]["ABC"]
-
-      # Should not have server or client functions, but preserve other properties
-      assert Map.has_key?(encoded_action["code"], "server") == false
-      assert Map.has_key?(encoded_action["code"], "client") == false
-
-      # Should preserve all other properties
-      assert encoded_action["code"]["automatically_added_packages"] ==
-               action_json["code"]["automatically_added_packages"]
-
-      assert encoded_action["code"]["package"] == action_json["code"]["package"]
-      assert encoded_action["code"]["package_hash"] == action_json["code"]["package_hash"]
-      assert encoded_action["code"]["package_status"] == action_json["code"]["package_status"]
-      assert encoded_action["code"]["package_used"] == action_json["code"]["package_used"]
+      assert_raise File.Error, ~r/server\.js/, fn ->
+        capture_io(fn -> Action.encode_actions(src_json, opts) end)
+      end
     end
 
     test "handles actions without original code", %{
@@ -283,18 +262,23 @@ defmodule Pled.Commands.Encoder.ActionTest do
       {:ok, action_dir: tmp_dir, original_json: original_json}
     end
 
-    test "returns empty map when no JS files exist", %{
+    test "fails when code sections exist but the JS files are missing", %{
       action_dir: action_dir,
       original_json: original_json
     } do
-      result = Action.generate_code_block(action_dir, original_json, false)
-      # Should preserve non-function properties but remove server/client functions
-      expected_code = original_json["code"] |> Map.drop(["server", "client"])
-      assert result == %{"code" => expected_code}
+      assert_raise File.Error, ~r/server\.js/, fn ->
+        Action.generate_code_block(action_dir, original_json, false)
+      end
     end
 
-    test "generates server function only", %{action_dir: action_dir, original_json: original_json} do
+    test "generates server function only", %{action_dir: action_dir} do
       File.write!(Path.join(action_dir, "server.js"), "    return { modified: true };")
+
+      original_json = %{
+        "code" => %{
+          "server" => %{"fn" => "async function(properties, context) {\n    return {};\n}"}
+        }
+      }
 
       result = Action.generate_code_block(action_dir, original_json, false)
 
@@ -302,8 +286,14 @@ defmodule Pled.Commands.Encoder.ActionTest do
       assert result["code"]["server"]["fn"] =~ "modified: true"
     end
 
-    test "generates client function only", %{action_dir: action_dir, original_json: original_json} do
+    test "generates client function only", %{action_dir: action_dir} do
       File.write!(Path.join(action_dir, "client.js"), "    console.log('modified');")
+
+      original_json = %{
+        "code" => %{
+          "client" => %{"fn" => "function(properties, context) {\n    console.log('o');\n}"}
+        }
+      }
 
       result = Action.generate_code_block(action_dir, original_json, false)
 

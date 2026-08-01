@@ -98,6 +98,10 @@ defmodule Pled.Commands.Encoder do
 
       {:ok, payload, issues}
     end
+  rescue
+    e in File.Error ->
+      {:error,
+       "#{Exception.message(e)}. Restore the file or run `pled pull` to re-fetch the plugin."}
   end
 
   @doc """
@@ -154,7 +158,9 @@ defmodule Pled.Commands.Encoder do
         {:error, "#{path} is not valid JSON: #{Exception.message(error)}"}
 
       {:error, reason} ->
-        {:error, "Failed to read #{path}: #{:file.format_error(reason)}"}
+        {:error,
+         "Failed to read #{path}: #{:file.format_error(reason)}. " <>
+           "Run `pled pull` to fetch the plugin."}
     end
   end
 
