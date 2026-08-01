@@ -192,6 +192,32 @@ defmodule Pled.DecoderRobustnessTest do
     end
   end
 
+  describe "an action code section without a body" do
+    @bodyless_plugin %{
+      "name" => "WIP Plugin",
+      "plugin_actions" => %{
+        "AAK" => %{
+          "display" => "Sign token",
+          "code" => %{"server" => %{"package_used" => true}}
+        }
+      }
+    }
+
+    test "decodes without a js file and encodes back unchanged", %{tmp_dir: tmp_dir} do
+      src_dir = Path.join(tmp_dir, "src")
+      File.mkdir_p!(src_dir)
+      File.write!(Path.join(src_dir, "plugin.json"), Jason.encode!(@bodyless_plugin))
+
+      assert :ok = Decoder.decode(@bodyless_plugin, tmp_dir)
+      refute File.exists?(Path.join(src_dir, "actions/sign-token-AAK/server.js"))
+
+      capture_io(fn -> send(self(), {:build, Encoder.build(src_dir: src_dir)}) end)
+
+      assert_received {:build, {:ok, payload, []}}
+      assert payload["plugin_actions"]["AAK"]["code"] == %{"server" => %{"package_used" => true}}
+    end
+  end
+
   defp restore_env(name, nil), do: System.delete_env(name)
   defp restore_env(name, value), do: System.put_env(name, value)
 

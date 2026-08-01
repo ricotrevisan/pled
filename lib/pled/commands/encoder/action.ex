@@ -82,23 +82,28 @@ defmodule Pled.Commands.Encoder.Action do
   end
 
   defp put_function(code, original_code, func, js_path, verbose?) do
+    existing = Map.get(original_code, func)
+
     cond do
       File.exists?(js_path) ->
         content = File.read!(js_path)
-        existing = Map.get(original_code, func, %{})
 
         UI.info("Using modified #{func} function from #{func}.js", verbose?)
 
         Map.put(
           code,
           func,
-          Map.put(existing, "fn", wrapper(existing, func) <> " {\n" <> content <> "\n}")
+          Map.put(existing || %{}, "fn", wrapper(existing, func) <> " {\n" <> content <> "\n}")
         )
 
-      Map.has_key?(original_code, func) ->
-        # the action json has this code section, so its js file is expected;
-        # dropping the code silently would delete it from the remote on push
+      is_binary(existing["fn"]) ->
+        # the action json records a body, so its js file is expected; dropping
+        # the code silently would delete it from the remote on push
         raise File.Error, path: js_path, reason: :enoent, action: "read"
+
+      is_map(existing) ->
+        # a body-less code section has no js file to lose, so pass it through
+        Map.put(code, func, existing)
 
       true ->
         code
@@ -109,7 +114,7 @@ defmodule Pled.Commands.Encoder.Action do
   # (async or not) so a rebuilt payload matches the remote byte-for-byte.
   # Older src trees lack it, so fall back to the historical defaults.
   defp wrapper(code_block, func) do
-    case Pled.CodeBlock.signature(Map.get(code_block, "fn")) do
+    case Pled.CodeBlock.signature(code_block["fn"]) do
       {:ok, signature} -> signature
       :error -> @default_wrappers[func]
     end

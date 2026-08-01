@@ -9,7 +9,7 @@ defmodule Pled.Sync do
   """
 
   alias Pled.Commands.Encoder
-  alias Pled.{BubbleApi, JsAst, PluginDiff, PluginModel}
+  alias Pled.{BubbleApi, JsAst, PluginDiff, PluginModel, UI}
 
   @type state :: :in_sync | :local_ahead | :remote_ahead | :diverged | :no_baseline
   @type error_reason :: String.t() | {:remote_unreachable, String.t()}
@@ -108,7 +108,7 @@ defmodule Pled.Sync do
         {:ok, payload, issues}
 
       {:error, reason} ->
-        {:error, "Failed to build local plugin: #{format_reason(reason)}"}
+        {:error, "Failed to build local plugin: #{UI.format_reason(reason)}"}
 
       other ->
         {:error, "Failed to build local plugin: unexpected result #{inspect(other)}"}
@@ -162,7 +162,8 @@ defmodule Pled.Sync do
             "(expected a JSON object, got #{inspect(payload)})."}}
 
       {:error, reason} ->
-        {:error, {:remote_unreachable, "Failed to fetch remote plugin: #{format_reason(reason)}"}}
+        {:error,
+         {:remote_unreachable, "Failed to fetch remote plugin: #{UI.format_reason(reason)}"}}
     end
   end
 
@@ -171,7 +172,7 @@ defmodule Pled.Sync do
   defp build_model(payload, source) do
     case PluginModel.from_remote(payload) do
       {:ok, model} -> {:ok, model}
-      {:error, reason} -> {:error, invalid_payload_message(source, format_reason(reason))}
+      {:error, reason} -> {:error, invalid_payload_message(source, UI.format_reason(reason))}
     end
   rescue
     error ->
@@ -208,7 +209,4 @@ defmodule Pled.Sync do
   defp snapshot_file_path do
     Application.get_env(:pled, :src_snapshot_file, ".src.json")
   end
-
-  defp format_reason(reason) when is_binary(reason), do: reason
-  defp format_reason(reason), do: inspect(reason)
 end

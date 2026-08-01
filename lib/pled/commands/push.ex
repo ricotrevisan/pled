@@ -7,7 +7,7 @@ defmodule Pled.Commands.Push do
   """
 
   alias Pled.Commands.Encoder
-  alias Pled.{BubbleApi, DiffFormatter, Prompt, RemoteChecker, Sync}
+  alias Pled.{BubbleApi, DiffFormatter, Prompt, RemoteChecker, Sync, UI}
 
   def help do
     IO.puts("""
@@ -163,14 +163,9 @@ defmodule Pled.Commands.Push do
   end
 
   defp push_error(reason) do
-    IO.puts("Push failed: #{format_reason(reason)}")
+    IO.puts("Push failed: #{UI.format_reason(reason)}")
     {:error, reason}
   end
 
   defp verbose?(opts), do: Keyword.get(opts, :verbose, false)
-
-  defp format_reason({:remote_unreachable, message}), do: message
-  defp format_reason({:unauthorized, message}), do: message
-  defp format_reason(reason) when is_binary(reason), do: reason
-  defp format_reason(reason), do: inspect(reason)
 end

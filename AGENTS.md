@@ -78,13 +78,13 @@ It is recommended to use a tool like `direnv` to manage these variables on a per
 ## 6. Available Commands
 
 *   `pull`: Fetches the plugin data from Bubble.io and decodes it into local files. Refuses when local changes are unpushed unless `--wipe`; removes entities deleted or renamed in Bubble.
-*   `push`: Encodes local files and pushes the changes to Bubble.io.
+*   `push`: Encodes local files and pushes the changes to Bubble.io. Refuses when the remote moved since the last pull unless `--force`.
 *   `encode`: Encodes the plugin files into `dist/plugin.json`.
 *   `upload <file_path>`: Uploads a specific JSON file to Bubble.io.
 *   `watch`: Watches for file changes in the `src/` directory and automatically pushes them to Bubble.io.
 *   `init`: Initializes a new plugin directory with a recommended structure and configuration files.
 *   `help`: Displays the help message.
-*   `check_remote`: Compares local files with the remote version on Bubble.
+*   `check_remote`: Reports the three-way sync state (baseline, local, remote) without changing anything; agrees with `status`.
 *   `compile`: Compiles the Elixir code.
 
 ## 7. File Structure

@@ -60,8 +60,8 @@ defmodule Pled.Commands.Decoder do
     prune(dir, keep, &String.ends_with?(&1, ".js"))
   end
 
-  # Only entries pled itself writes are removable; anything else the user keeps
-  # here is left alone.
+  # Every directory here is an entity the encoder builds, so a directory the
+  # remote no longer has is stale. Loose files the user keeps are left alone.
   defp prune(dir, keep, removable?) do
     case File.ls(dir) do
       {:ok, entries} ->
@@ -141,8 +141,10 @@ defmodule Pled.Commands.Decoder do
               :error -> Map.put(code, func, Map.delete(block, "fn"))
             end
 
+          # a section without a body has no js file; keeping it verbatim is what
+          # lets the encoder rebuild the remote payload unchanged
           _ ->
-            Map.delete(code, func)
+            code
         end
       end)
 

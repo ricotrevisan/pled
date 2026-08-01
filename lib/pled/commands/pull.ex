@@ -142,12 +142,7 @@ defmodule Pled.Commands.Pull do
   end
 
   defp pull_error(reason) do
-    IO.puts("Pull failed: #{format_reason(reason)}")
+    IO.puts("Pull failed: #{UI.format_reason(reason)}")
     {:error, reason}
   end
-
-  defp format_reason({:remote_unreachable, message}), do: message
-  defp format_reason({:unauthorized, message}), do: message
-  defp format_reason(reason) when is_binary(reason), do: reason
-  defp format_reason(reason), do: inspect(reason)
 end

@@ -3,7 +3,7 @@ defmodule Pled.Commands.CheckRemote do
   Command to report the three-way sync state without changing it.
   """
 
-  alias Pled.{DiffFormatter, Sync}
+  alias Pled.{DiffFormatter, Sync, UI}
 
   def help do
     IO.puts("""
@@ -38,13 +38,10 @@ defmodule Pled.Commands.CheckRemote do
       {:error, reason} ->
         IO.puts(
           IO.ANSI.red() <>
-            "✗ Failed to determine sync status: #{error_message(reason)}" <> IO.ANSI.reset()
+            "✗ Failed to determine sync status: #{UI.format_reason(reason)}" <> IO.ANSI.reset()
         )
 
         {:error, reason}
     end
   end
-
-  defp error_message({:remote_unreachable, message}), do: message
-  defp error_message(message) when is_binary(message), do: message
 end

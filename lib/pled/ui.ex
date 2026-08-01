@@ -36,6 +36,15 @@ defmodule Pled.UI do
   end
 
   @doc """
+  Renders an error reason as user-facing text.
+  """
+  @spec format_reason(term()) :: String.t()
+  def format_reason({:remote_unreachable, message}), do: message
+  def format_reason({:unauthorized, message}), do: message
+  def format_reason(reason) when is_binary(reason), do: reason
+  def format_reason(reason), do: inspect(reason)
+
+  @doc """
   Prints an error message. Always prints.
   """
   @spec error(iodata()) :: :ok
