@@ -56,7 +56,7 @@ defmodule Pled.EncoderTest do
     test "encode_element/1", %{element_dir: element_dir} do
       encoded_element = Encoder.Element.encode_element(element_dir)
       assert is_tuple(encoded_element)
-      {:ok, {key, value}} = encoded_element
+      {:ok, {key, value}, []} = encoded_element
       assert key == "AAC"
       assert is_map(value["code"])
       assert Map.keys(value["code"]["initialize"])
@@ -113,8 +113,7 @@ defmodule Pled.EncoderTest do
       assert String.ends_with?(generated_fn, "\n}")
     end
 
-    test "field reordering with rank changes only", %{element_dir: element_dir} do
-      # Create a fields.txt with reordered fields (no caption changes)
+    test "unchanged field order keeps the original ranks", %{element_dir: element_dir} do
       fields_content = """
       Header font color (ADe)
       Allowed MIME Types (AFz)
@@ -122,23 +121,33 @@ defmodule Pled.EncoderTest do
 
       File.write!(Path.join(element_dir, "fields.txt"), fields_content)
 
-      {:ok, {_key, result}} = Encoder.Element.encode_element(element_dir)
+      {:ok, {_key, result}, []} = Encoder.Element.encode_element(element_dir)
 
       fields = result["fields"]
-      # Was 56, now should be 0
-      assert fields["ADe"]["rank"] == 0
-      # Was 101, now should be 1
-      assert fields["AFz"]["rank"] == 1
+      assert fields["ADe"]["rank"] == 56
+      assert fields["AFz"]["rank"] == 101
 
       # Captions should remain unchanged
       assert fields["ADe"]["caption"] == "Header font color"
       assert fields["AFz"]["caption"] == "Allowed MIME Types"
     end
 
-    test "field reordering with caption changes", %{element_dir: element_dir} do
-      # Mock IO.gets to automatically confirm changes
-      import ExUnit.CaptureIO
+    test "field reordering reassigns the original rank values", %{element_dir: element_dir} do
+      fields_content = """
+      Allowed MIME Types (AFz)
+      Header font color (ADe)
+      """
 
+      File.write!(Path.join(element_dir, "fields.txt"), fields_content)
+
+      {:ok, {_key, result}, []} = Encoder.Element.encode_element(element_dir)
+
+      fields = result["fields"]
+      assert fields["AFz"]["rank"] == 56
+      assert fields["ADe"]["rank"] == 101
+    end
+
+    test "field caption changes are applied and surfaced as issues", %{element_dir: element_dir} do
       fields_content = """
       Modified Header Color (ADe)
       Custom MIME Types (AFz)
@@ -146,24 +155,28 @@ defmodule Pled.EncoderTest do
 
       File.write!(Path.join(element_dir, "fields.txt"), fields_content)
 
-      # Capture the output and provide 'y' as input to confirm changes
-      result =
-        capture_io([input: "y\n"], fn ->
-          {:ok, {_key, encoded}} = Encoder.Element.encode_element(element_dir)
-          send(self(), {:result, encoded})
-        end)
-
-      assert_received {:result, encoded}
+      {:ok, {_key, encoded}, issues} = Encoder.Element.encode_element(element_dir)
 
       fields = encoded["fields"]
       assert fields["ADe"]["caption"] == "Modified Header Color"
       assert fields["AFz"]["caption"] == "Custom MIME Types"
-      assert fields["ADe"]["rank"] == 0
-      assert fields["AFz"]["rank"] == 1
 
-      # Should show change detection
-      assert result =~ "Field changes detected"
-      assert result =~ "Caption changes"
+      assert Enum.sort_by(issues, & &1.field) == [
+               %{
+                 type: :field_caption_change,
+                 element: "AAC",
+                 field: "ADe",
+                 from: "Header font color",
+                 to: "Modified Header Color"
+               },
+               %{
+                 type: :field_caption_change,
+                 element: "AAC",
+                 field: "AFz",
+                 from: "Allowed MIME Types",
+                 to: "Custom MIME Types"
+               }
+             ]
     end
 
     test "field validation - duplicate keys", %{element_dir: element_dir} do

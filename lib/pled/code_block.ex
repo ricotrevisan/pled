@@ -89,6 +89,22 @@ defmodule Pled.CodeBlock do
   end
 
   @doc """
+  Extracts the function signature (e.g. `"async function(properties, context)"`)
+  from a function source string. The decoder stores this signature in the
+  cleaned action json and the encoder re-parses it to rebuild the exact
+  remote wrapper.
+  """
+  @spec signature(String.t()) :: {:ok, String.t()} | :error
+  def signature(fn_source) when is_binary(fn_source) do
+    case Regex.run(~r/^\s*(?:async\s+)?function\s*\([^)]*\)/, fn_source) do
+      [signature | _] -> {:ok, String.trim(signature)}
+      nil -> :error
+    end
+  end
+
+  def signature(_), do: :error
+
+  @doc """
   True when the block has a parsed AST.
   """
   @spec ast?(t()) :: boolean()

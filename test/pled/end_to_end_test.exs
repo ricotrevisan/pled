@@ -60,12 +60,15 @@ defmodule Pled.EndToEndTest do
       src_server_js = action_path |> Path.join("server.js") |> File.read!()
 
       server_js = get_in(dist_json, ["plugin_actions", "AEK", "code", "server", "fn"])
-      assert String.starts_with?(server_js, "async function(properties, context)")
+      # the fixture's server fn is not async; the wrapper is preserved as-is
+      assert String.starts_with?(server_js, "function(properties, context) {")
 
       assert server_js =~ String.slice(src_server_js, 0..10)
     end
 
-    test "src/actions/action/action.json doesn't have server key", %{src_path: src_path} do
+    test "src/actions/action/action.json keeps only the server fn signature", %{
+      src_path: src_path
+    } do
       action_path = Path.join([src_path, "actions", "generate-jwt-key-AEK"])
 
       action_json =
@@ -74,7 +77,8 @@ defmodule Pled.EndToEndTest do
         |> File.read!()
         |> Jason.decode!()
 
-      assert Map.has_key?(action_json["code"], "server") == false
+      assert action_json["code"]["server"]["fn"] == "function(properties, context)"
+      assert Map.has_key?(action_json["code"], "client") == false
     end
   end
 

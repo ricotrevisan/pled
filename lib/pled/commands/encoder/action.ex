@@ -1,6 +1,11 @@
 defmodule Pled.Commands.Encoder.Action do
   alias Pled.UI
 
+  @default_wrappers %{
+    "server" => "async function(properties, context)",
+    "client" => "function(properties, context)"
+  }
+
   def encode_actions(%{} = src_json, opts) do
     actions_dir = opts |> Keyword.get(:actions_dir)
     verbose? = Keyword.get(opts, :verbose, false)
@@ -55,48 +60,40 @@ defmodule Pled.Commands.Encoder.Action do
     # Start with only the non-function properties from original code
     base_properties = Map.drop(original_code, ["server", "client"])
 
-    # Process server function
     updated_code =
       if File.exists?(server_js) do
         content = File.read!(server_js)
-
-        # Get existing server code block or create empty one
         existing_server = Map.get(original_code, "server", %{})
 
         UI.info("Using modified server function from server.js", verbose?)
 
-        # Update only the server function
         Map.put(
           base_properties,
           "server",
           Map.put(
             existing_server,
             "fn",
-            "async function(properties, context) {\n" <> content <> "\n}"
+            wrapper(existing_server, "server") <> " {\n" <> content <> "\n}"
           )
         )
       else
         base_properties
       end
 
-    # Process client function
     updated_code =
       if File.exists?(client_js) do
         content = File.read!(client_js)
-
-        # Get existing client code block or create empty one
         existing_client = Map.get(original_code, "client", %{})
 
         UI.info("Using modified client function from client.js", verbose?)
 
-        # Update only the client function
         Map.put(
           updated_code,
           "client",
           Map.put(
             existing_client,
             "fn",
-            "function(properties, context) {\n" <> content <> "\n}"
+            wrapper(existing_client, "client") <> " {\n" <> content <> "\n}"
           )
         )
       else
@@ -104,5 +101,15 @@ defmodule Pled.Commands.Encoder.Action do
       end
 
     %{"code" => updated_code}
+  end
+
+  # The decoder preserves the original function signature in the action json
+  # (async or not) so a rebuilt payload matches the remote byte-for-byte.
+  # Older src trees lack it, so fall back to the historical defaults.
+  defp wrapper(code_block, func) do
+    case Pled.CodeBlock.signature(Map.get(code_block, "fn")) do
+      {:ok, signature} -> signature
+      :error -> @default_wrappers[func]
+    end
   end
 end

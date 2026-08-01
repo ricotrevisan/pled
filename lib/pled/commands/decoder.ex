@@ -68,7 +68,22 @@ defmodule Pled.Commands.Decoder do
 
   def clean_action_data(name, action_data, action_dir) do
     file_path = Path.join(action_dir, "#{name}.json")
-    code_data = Map.drop(action_data["code"], ["server", "client"])
+
+    # Keep the function signature (async or not) so the encoder can rebuild
+    # the exact remote wrapper; the body lives in server.js / client.js.
+    code_data =
+      Enum.reduce(["server", "client"], action_data["code"], fn func, code ->
+        case code do
+          %{^func => %{"fn" => fn_src} = block} when is_binary(fn_src) ->
+            case Pled.CodeBlock.signature(fn_src) do
+              {:ok, signature} -> Map.put(code, func, Map.put(block, "fn", signature))
+              :error -> Map.put(code, func, Map.delete(block, "fn"))
+            end
+
+          _ ->
+            Map.delete(code, func)
+        end
+      end)
 
     updated_action_data =
       Map.put(action_data, "code", code_data)
