@@ -70,6 +70,22 @@ defmodule Pled.Sync do
   end
 
   @doc """
+  Saves the exact payload used by a successful sync operation as the baseline.
+  """
+  @spec save_baseline(map()) :: :ok | {:error, String.t()}
+  def save_baseline(%{} = payload) do
+    path = snapshot_file_path()
+
+    case File.write(path, Jason.encode!(payload, pretty: true)) do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        {:error, "Failed to save baseline #{path}: #{:file.format_error(reason)}"}
+    end
+  end
+
+  @doc """
   Purely classifies three canonical fingerprints.
 
   A missing baseline is represented by `nil`.

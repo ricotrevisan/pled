@@ -84,6 +84,27 @@ defmodule Pled.BubbleApiTest do
 
   describe "save_plugin/0" do
     @tag :tmp_dir
+    test "returns an actionable error when dist/plugin.json is missing", %{tmp_dir: tmp_dir} do
+      assert {:error, reason} = File.cd!(tmp_dir, &BubbleApi.save_plugin/0)
+      assert reason =~ "dist/plugin.json"
+      assert reason =~ "pled encode"
+    end
+
+    @tag :tmp_dir
+    test "returns an actionable error for invalid or non-object JSON", %{tmp_dir: tmp_dir} do
+      File.mkdir_p!(Path.join(tmp_dir, "dist"))
+      path = Path.join([tmp_dir, "dist", "plugin.json"])
+
+      File.write!(path, "{not json")
+      assert {:error, invalid_reason} = File.cd!(tmp_dir, &BubbleApi.save_plugin/0)
+      assert invalid_reason =~ "not valid JSON"
+
+      File.write!(path, "[]")
+      assert {:error, object_reason} = File.cd!(tmp_dir, &BubbleApi.save_plugin/0)
+      assert object_reason =~ "JSON object"
+    end
+
+    @tag :tmp_dir
     test "returns an actionable unauthorized error when Bubble rejects edit permission", %{
       tmp_dir: tmp_dir
     } do

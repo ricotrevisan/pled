@@ -12,6 +12,9 @@ defmodule Pled do
       :ok ->
         System.halt(0)
 
+      {:error, {:reported, _reason}} ->
+        System.halt(1)
+
       {:error, reason} ->
         IO.puts("Command failed: #{inspect(reason)}")
         System.halt(1)
@@ -138,7 +141,14 @@ defmodule Pled do
   end
 
   def handle_command({:push, opts}) do
-    if Keyword.get(opts, :help, false), do: Commands.Push.help(), else: Commands.Push.run(opts)
+    if Keyword.get(opts, :help, false) do
+      Commands.Push.help()
+    else
+      case Commands.Push.run(opts) do
+        {:error, reason} -> {:error, {:reported, reason}}
+        result -> result
+      end
+    end
   end
 
   def handle_command({:upload, {file_path, opts}}) do

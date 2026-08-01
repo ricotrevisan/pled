@@ -75,7 +75,7 @@ defmodule Pled.FileWatcher do
   def handle_info(:run_push, state) do
     # Wrap in try/catch to handle any unexpected errors
     try do
-      case Pled.Commands.Push.run(force: true) do
+      case Pled.Commands.Push.run(force: true, sync: false) do
         :ok ->
           :ok
 

@@ -46,25 +46,9 @@ defmodule Pled.Commands.Encoder do
     end
 
     case build(opts) do
-      {:ok, payload, []} ->
-        write_and_report(payload, opts)
-
       {:ok, payload, issues} ->
-        print_issues(issues)
-
-        cond do
-          Prompt.interactive?() ->
-            if Prompt.confirm?("Apply these changes and continue? [y/N]: ") do
-              write_and_report(payload, opts)
-            else
-              IO.puts("Encoding cancelled.")
-              {:error, :cancelled}
-            end
-
-          true ->
-            IO.puts("Cannot confirm these changes in a non-interactive session.")
-            IO.puts("Fix the issues above, or run `pled encode` from a terminal to confirm them.")
-            {:error, :unresolved_issues}
+        with :ok <- confirm_issues(issues) do
+          write_and_report(payload, opts)
         end
 
       {:error, reason} ->
@@ -102,6 +86,33 @@ defmodule Pled.Commands.Encoder do
     e in File.Error ->
       {:error,
        "#{Exception.message(e)}. Restore the file or run `pled pull` to re-fetch the plugin."}
+  end
+
+  @doc """
+  Confirms any structured build issues before a command uses the resolved payload.
+  """
+  def confirm_issues(issues, opts \\ [])
+  def confirm_issues([], _opts), do: :ok
+
+  def confirm_issues(issues, opts) when is_list(issues) do
+    operation = Keyword.get(opts, :operation, "Encoding")
+    command = Keyword.get(opts, :command, "pled encode")
+    print_issues(issues)
+
+    cond do
+      Prompt.interactive?() ->
+        if Prompt.confirm?("Apply these changes and continue? [y/N]: ") do
+          :ok
+        else
+          IO.puts("#{operation} cancelled.")
+          {:error, :cancelled}
+        end
+
+      true ->
+        IO.puts("Cannot confirm these changes in a non-interactive session.")
+        IO.puts("Fix the issues above, or run `#{command}` from a terminal to confirm them.")
+        {:error, :unresolved_issues}
+    end
   end
 
   @doc """

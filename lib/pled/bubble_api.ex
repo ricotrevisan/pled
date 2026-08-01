@@ -38,6 +38,29 @@ defmodule Pled.BubbleApi do
   end
 
   def save_plugin do
+    with {:ok, content} <- File.read("dist/plugin.json"),
+         {:ok, payload} <- Jason.decode(content),
+         true <- is_map(payload) do
+      save_plugin(payload)
+    else
+      {:error, :enoent} ->
+        {:error, "Failed to read dist/plugin.json: file not found. Run `pled encode` first."}
+
+      {:error, %Jason.DecodeError{} = error} ->
+        {:error, "dist/plugin.json is not valid JSON: #{Exception.message(error)}"}
+
+      false ->
+        {:error, "dist/plugin.json must contain a JSON object."}
+
+      {:error, reason} ->
+        {:error, "Failed to read dist/plugin.json: #{:file.format_error(reason)}"}
+    end
+  end
+
+  @doc """
+  Saves the provided Bubble plugin payload.
+  """
+  def save_plugin(%{} = payload) do
     IO.puts("Uploading plugin...")
 
     with {:ok, plugin_id} <- Pled.PluginId.load(),
@@ -47,9 +70,7 @@ defmodule Pled.BubbleApi do
         {"content-type", "application/json"}
       ]
 
-      content = File.read!("dist/plugin.json")
-
-      body = %{"id" => plugin_id, "raw" => Jason.decode!(content)}
+      body = %{"id" => plugin_id, "raw" => payload}
 
       case Req.post(
              @save_plugin_url,
