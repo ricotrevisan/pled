@@ -15,7 +15,7 @@ defmodule Pled.Commands.Help do
       pled push --force     Force push, overwriting remote changes
       pled encode           Prepares the files to upload. Compiles src/ files into dist/plugin.json
       pled upload <file>    Upload a file to Bubble.io CDN
-      pled watch            Watches the `src/` directory for changes and pushes to Bubble
+      pled watch            Keeps `src/` and Bubble in sync, pausing on conflicts
       pled check-remote     Check for remote changes without pushing
       pled status           Show environment, auth, and sync status
 

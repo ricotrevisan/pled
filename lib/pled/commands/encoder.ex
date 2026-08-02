@@ -99,19 +99,17 @@ defmodule Pled.Commands.Encoder do
     command = Keyword.get(opts, :command, "pled encode")
     print_issues(issues)
 
-    cond do
-      Prompt.interactive?() ->
-        if Prompt.confirm?("Apply these changes and continue? [y/N]: ") do
-          :ok
-        else
-          IO.puts("#{operation} cancelled.")
-          {:error, :cancelled}
-        end
-
-      true ->
-        IO.puts("Cannot confirm these changes in a non-interactive session.")
-        IO.puts("Fix the issues above, or run `#{command}` from a terminal to confirm them.")
-        {:error, :unresolved_issues}
+    if Prompt.interactive?(opts) do
+      if Prompt.confirm?("Apply these changes and continue? [y/N]: ", opts) do
+        :ok
+      else
+        IO.puts("#{operation} cancelled.")
+        {:error, :cancelled}
+      end
+    else
+      IO.puts("Cannot confirm these changes in a non-interactive session.")
+      IO.puts("Fix the issues above, or run `#{command}` from a terminal to confirm them.")
+      {:error, :unresolved_issues}
     end
   end
 

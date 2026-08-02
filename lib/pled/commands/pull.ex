@@ -3,7 +3,8 @@ defmodule Pled.Commands.Pull do
   Fetches the remote plugin and rewrites the local source tree from it.
 
   The three-way sync state guards the overwrite: unpushed local work is only
-  discarded when `--wipe` states that intent explicitly.
+  discarded when `--wipe` states that intent explicitly. Watch passes its
+  already-computed status as the `:sync` option to avoid a second fetch.
   """
 
   alias Pled.Commands.Decoder
@@ -65,7 +66,7 @@ defmodule Pled.Commands.Pull do
   end
 
   defp guard(opts) do
-    case Sync.status() do
+    case Sync.status(opts) do
       {:ok, %{state: state} = sync} when state in [:local_ahead, :diverged] ->
         IO.puts(DiffFormatter.format_sync(sync, detailed: Keyword.get(opts, :verbose, false)))
         IO.puts("Pull refused to protect unpushed local changes.")

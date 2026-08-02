@@ -59,9 +59,13 @@ Security reminder: Your BUBBLE_COOKIE grants access to your Bubble account. Trea
     pled push --force
 
 6) Fast inner loop (optional)
-- Auto-push when you save JS files:
+- Keep local files and Bubble in sync while you work:
     pled watch
-- Changes in `src/` are debounced and pushed automatically.
+- Saves in `src/` are debounced and pushed when the remote is clean.
+- Changes made in the Bubble editor are pulled when nothing local is unpushed.
+- If both sides changed, watch pauses and prints how to resolve it, then resumes
+  on its own once you do.
+- `pled watch --interval 60` checks Bubble once a minute instead of every 15s.
 
 ## Mental model: how Pled works
 
@@ -111,7 +115,7 @@ Verify:
     # modify files under src/
     pled push
 
-- Auto-push while editing:
+- Two-way sync while editing:
     pled watch
 
 - Build encoded JSON without uploading (for inspection/CI):
@@ -137,14 +141,16 @@ You should see:
     version X.Y.Z
 
     Usage:
-      pled init             Initialize a new Pled project structure
+      pled init <url|id>    Initialize project with a Bubble plugin URL or ID
       pled pull             Fetch plugin from Bubble.io and save to src/plugin.json
+      pled pull --wipe      Discard local changes and pull
       pled push             Encodes and then upload plugin to Bubble.io
-      pled push --force     Force push, skipping remote change detection
+      pled push --force     Force push, overwriting remote changes
       pled encode           Prepares the files to upload. Compiles src/ files into dist/plugin.json
       pled upload <file>    Upload a file to Bubble.io CDN
-      pled watch            Starts the server that watches the `src/` directory for changes and pushes it to Bubble.
+      pled watch            Keeps `src/` and Bubble in sync, pausing on conflicts
       pled check-remote     Check for remote changes without pushing
+      pled status           Show environment, auth, and sync status
 
     Required Environment Variables:
       BUBBLE_COOKIE         Authentication cookie for Bubble.io
@@ -174,8 +180,12 @@ You should see:
   - Try `pled encode` and inspect `dist/plugin.json` to verify your changes are present.
 
 - Watch doesn't trigger:
-  - Only JS changes in `src/` are watched.
+  - Only files under `src/` are watched.
   - Ensure your editor writes to disk and there's no file permission issue.
+
+- Watch says it is paused:
+  - Local and remote both changed. Run `pled pull --wipe` to drop local changes
+    or `pled push --force` to overwrite the remote; watch resumes by itself.
 
 ## Project structure (local)
 

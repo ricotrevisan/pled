@@ -2,12 +2,12 @@ defmodule Pled.Commands.Push do
   @moduledoc """
   Uploads the local plugin when the three-way sync state permits it.
 
-  Watch temporarily passes the internal `:sync` option as `false` to retain
-  its legacy RemoteChecker guard until conflict-aware watch mode lands.
+  Watch passes its already-computed `Pled.Sync` status as the `:sync` option to
+  avoid fetching the remote twice, and `interactive: false` to stay unattended.
   """
 
   alias Pled.Commands.Encoder
-  alias Pled.{BubbleApi, DiffFormatter, Prompt, RemoteChecker, Sync, UI}
+  alias Pled.{BubbleApi, DiffFormatter, Prompt, Sync, UI}
 
   def help do
     IO.puts("""
@@ -35,18 +35,9 @@ defmodule Pled.Commands.Push do
 
   def run(opts) do
     IO.puts("pushing")
-
-    if Keyword.get(opts, :sync, true) do
-      run_guarded(opts)
-    else
-      run_legacy(opts)
-    end
-  end
-
-  defp run_guarded(opts) do
     force? = Keyword.get(opts, :force, false)
 
-    case Sync.status() do
+    case Sync.status(opts) do
       {:ok, %{state: :in_sync} = sync} ->
         IO.puts(DiffFormatter.format_sync(sync, detailed: verbose?(opts)))
         IO.puts("Plugin is already in sync; nothing uploaded.")
@@ -56,9 +47,9 @@ defmodule Pled.Commands.Push do
       {:ok, sync} ->
         with :ok <- authorize_push(sync, force?, opts),
              :ok <-
-               Encoder.confirm_issues(sync.issues,
-                 operation: "Push",
-                 command: "pled push"
+               Encoder.confirm_issues(
+                 sync.issues,
+                 Keyword.merge(opts, operation: "Push", command: "pled push")
                ),
              :ok <- write_payload(sync.local, opts),
              :ok <- BubbleApi.save_plugin(sync.local) do
@@ -73,18 +64,6 @@ defmodule Pled.Commands.Push do
 
       {:error, reason} ->
         push_error(reason)
-    end
-  end
-
-  # Watch keeps its RemoteChecker-based guard until the conflict-aware watch ticket lands.
-  defp run_legacy(opts) do
-    with :ok <- Encoder.encode(opts),
-         :ok <- BubbleApi.save_plugin() do
-      _ = RemoteChecker.update_snapshot()
-      IO.puts("Push completed")
-      :ok
-    else
-      {:error, reason} -> push_error(reason)
     end
   end
 
@@ -117,11 +96,11 @@ defmodule Pled.Commands.Push do
     :ok
   end
 
-  defp authorize_push(%{state: :no_baseline}, false, _opts) do
+  defp authorize_push(%{state: :no_baseline}, false, opts) do
     IO.puts(IO.ANSI.yellow() <> "⚠ No baseline found." <> IO.ANSI.reset())
 
-    if Prompt.interactive?() do
-      if Prompt.confirm?("Push without a baseline? This may overwrite remote work. [y/N]: ") do
+    if Prompt.interactive?(opts) do
+      if Prompt.confirm?("Push without a baseline? This may overwrite remote work. [y/N]: ", opts) do
         :ok
       else
         IO.puts("Push cancelled; nothing was uploaded.")

@@ -62,8 +62,8 @@ defmodule Pled do
       ["watch" | rest] ->
         {parsed, remaining, invalid} =
           OptionParser.parse(rest,
-            strict: [help: :boolean, verbose: :boolean],
-            aliases: [h: :help, v: :verbose]
+            strict: [help: :boolean, verbose: :boolean, interval: :integer],
+            aliases: [h: :help, v: :verbose, i: :interval]
           )
 
         if invalid != [] or remaining != [], do: {:help, []}, else: {:watch, parsed}
@@ -165,7 +165,14 @@ defmodule Pled do
   end
 
   def handle_command({:watch, opts}) do
-    if Keyword.get(opts, :help, false), do: Commands.Watch.help(), else: Commands.Watch.run(opts)
+    if Keyword.get(opts, :help, false) do
+      Commands.Watch.help()
+    else
+      case Commands.Watch.run(opts) do
+        {:error, reason} -> {:error, {:reported, reason}}
+        result -> result
+      end
+    end
   end
 
   def handle_command({:init, opts}) do

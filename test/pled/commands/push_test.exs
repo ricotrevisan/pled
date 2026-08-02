@@ -207,16 +207,47 @@ defmodule Pled.Commands.PushTest do
     refute File.exists?(Path.join(tmp_dir, "dist"))
   end
 
-  test "watch's internal legacy path bypasses Sync and retains its RemoteChecker flow", %{
+  test "a precomputed sync status is uploaded without refetching the remote", %{
     tmp_dir: tmp_dir,
     remote: remote
   } do
-    assert {output, :ok} = run_push(tmp_dir, force: true, sync: false)
+    change_local_name(tmp_dir, "Local name")
+    sync = File.cd!(tmp_dir, fn -> capture_sync() end)
+
+    assert {output, :ok} = run_push(tmp_dir, sync: sync)
 
     assert output =~ "Push completed"
-    refute output =~ "already in sync"
-    assert length(uploads(remote)) == 1
+    assert [sent] = uploads(remote)
+    assert sent["name"] == "Local name"
     assert request_counts(remote) == %{get: 1, post: 1}
+  end
+
+  test "interactive: false refuses a no-baseline push even on a terminal", %{
+    tmp_dir: tmp_dir,
+    remote: remote
+  } do
+    File.rm!(Path.join(tmp_dir, ".src.json"))
+    Application.put_env(:pled, :interactive, true)
+
+    assert {output, {:error, :no_baseline}} = run_push(tmp_dir, interactive: false)
+
+    assert output =~ "non-interactive"
+    refute output =~ "Push without a baseline?"
+    assert uploads(remote) == []
+  end
+
+  test "interactive: false refuses validation issues even on a terminal", %{
+    tmp_dir: tmp_dir,
+    remote: remote
+  } do
+    change_first_field_caption(tmp_dir)
+    Application.put_env(:pled, :interactive, true)
+
+    assert {output, {:error, :unresolved_issues}} = run_push(tmp_dir, interactive: false)
+
+    assert output =~ "non-interactive"
+    refute output =~ "Apply these changes"
+    assert uploads(remote) == []
   end
 
   test "remote fetch failures are not bypassed by --force", %{tmp_dir: tmp_dir, remote: remote} do
@@ -228,6 +259,12 @@ defmodule Pled.Commands.PushTest do
     assert reason =~ "HTTP 400"
     assert output =~ "maintenance"
     assert uploads(remote) == []
+  end
+
+  defp capture_sync do
+    capture_io(fn -> send(self(), {:sync, Pled.Sync.status()}) end)
+    assert_received {:sync, {:ok, sync}}
+    sync
   end
 
   defp run_push(tmp_dir, opts \\ [], input \\ nil) do

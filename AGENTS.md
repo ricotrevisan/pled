@@ -81,7 +81,7 @@ It is recommended to use a tool like `direnv` to manage these variables on a per
 *   `push`: Encodes local files and pushes the changes to Bubble.io. Refuses when the remote moved since the last pull unless `--force`.
 *   `encode`: Encodes the plugin files into `dist/plugin.json`.
 *   `upload <file_path>`: Uploads a specific JSON file to Bubble.io.
-*   `watch`: Watches for file changes in the `src/` directory and automatically pushes them to Bubble.io.
+*   `watch`: Keeps `src/` and Bubble in sync through the three-way sync engine: pushes local edits when the remote is clean, pulls remote changes when nothing local is unpushed, and pauses with a conflict banner when both sides moved. `--interval` sets the remote poll period in seconds (default 15).
 *   `init`: Initializes a new plugin directory with a recommended structure and configuration files.
 *   `help`: Displays the help message.
 *   `check_remote`: Reports the three-way sync state (baseline, local, remote) without changing anything; agrees with `status`.

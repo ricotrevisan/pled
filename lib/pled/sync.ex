@@ -16,8 +16,11 @@ defmodule Pled.Sync do
 
   @doc """
   Returns the current three-way sync state and the payloads used to determine it.
+
+  A caller that already holds a status (watch reuses one across a cycle) passes
+  it as the `:sync` option to skip the remote fetch.
   """
-  @spec status() ::
+  @spec status(keyword()) ::
           {:ok,
            %{
              state: state(),
@@ -28,7 +31,17 @@ defmodule Pled.Sync do
              issues: [map()]
            }}
           | {:error, error_reason()}
-  def status do
+  def status(opts \\ [])
+  def status(%{state: _} = sync), do: {:ok, sync}
+
+  def status(opts) when is_list(opts) do
+    case Keyword.get(opts, :sync) do
+      nil -> compute_status()
+      sync -> status(sync)
+    end
+  end
+
+  defp compute_status do
     with {:ok, remote} <- fetch_remote(),
          {:ok, base} <- read_baseline(),
          {:ok, local, issues} <- build_local() do
@@ -70,11 +83,17 @@ defmodule Pled.Sync do
   end
 
   @doc """
+  Returns the path of the baseline snapshot file.
+  """
+  @spec baseline_path() :: String.t()
+  def baseline_path, do: Application.get_env(:pled, :src_snapshot_file, ".src.json")
+
+  @doc """
   Saves the exact payload used by a successful sync operation as the baseline.
   """
   @spec save_baseline(map()) :: :ok | {:error, String.t()}
   def save_baseline(%{} = payload) do
-    path = snapshot_file_path()
+    path = baseline_path()
 
     case File.write(path, Jason.encode!(payload, pretty: true)) do
       :ok ->
@@ -121,7 +140,7 @@ defmodule Pled.Sync do
   end
 
   defp read_baseline do
-    path = snapshot_file_path()
+    path = baseline_path()
 
     case File.read(path) do
       {:ok, content} ->
@@ -205,8 +224,4 @@ defmodule Pled.Sync do
   end
 
   defp build_diffs(_state, _base, _local, _remote), do: %{}
-
-  defp snapshot_file_path do
-    Application.get_env(:pled, :src_snapshot_file, ".src.json")
-  end
 end
