@@ -33,12 +33,13 @@ defmodule Pled.EndToEndTest do
   end
 
   test "decode/1 extracts 5 root files", %{src_path: src_path} do
-    assert File.ls!(src_path) == [
-             "plugin.json",
-             "shared.html",
-             "elements",
-             "actions"
-           ]
+    assert Enum.sort(File.ls!(src_path)) ==
+             Enum.sort([
+               "plugin.json",
+               "shared.html",
+               "elements",
+               "actions"
+             ])
   end
 
   describe "plugin_actions" do
@@ -56,7 +57,7 @@ defmodule Pled.EndToEndTest do
       dist_json: dist_json
     } do
       action_path = Path.join([src_path, "actions", "generate-jwt-key-AEK"])
-      assert File.ls!(action_path) == ["server.js", "generate-jwt-key.json"]
+      assert Enum.sort(File.ls!(action_path)) == ["generate-jwt-key.json", "server.js"]
       src_server_js = action_path |> Path.join("server.js") |> File.read!()
 
       server_js = get_in(dist_json, ["plugin_actions", "AEK", "code", "server", "fn"])
@@ -91,15 +92,16 @@ defmodule Pled.EndToEndTest do
     test "src/elements/element has the correct amount of files", %{src_path: src_path} do
       element_path = Path.join([src_path, "elements", "tiptap-AAC"])
 
-      assert File.ls!(element_path) == [
-               "reset.js",
-               "preview.js",
-               "update.js",
-               "initialize.js",
-               "fields.txt",
-               "actions",
-               "AAC.json"
-             ]
+      assert Enum.sort(File.ls!(element_path)) ==
+               Enum.sort([
+                 "reset.js",
+                 "preview.js",
+                 "update.js",
+                 "initialize.js",
+                 "fields.txt",
+                 "actions",
+                 "AAC.json"
+               ])
     end
 
     test "src/elements/element/.json doesn't have repeated keys", %{src_path: src_path} do
@@ -172,56 +174,57 @@ defmodule Pled.EndToEndTest do
     test "src/elements/element/* doesn't have repeated keys", %{src_path: src_path} do
       element_actions_path = Path.join([src_path, "elements", "tiptap-AAC", "actions"])
 
-      assert File.ls!(element_actions_path) == [
-               "task-list-ABS.js",
-               "table-split-cell-ACy.js",
-               "h3-AAx.js",
-               "horizontal-rule-ABO.js",
-               "table-toggle-header-column-ACq.js",
-               "align-text-ACd.js",
-               "clear-contents-ABp.js",
-               "italic-AAj.js",
-               "table-delete-row-ACw.js",
-               "set-hard-break-AGC.js",
-               "unset-color-AFZ.js",
-               "select-entire-block-AFi.js",
-               "table-add-column-after-ACs.js",
-               "table-add-row-after-ACu.js",
-               "focus-ABr.js",
-               "insert-content-ADG.js",
-               "underline-ADB.js",
-               "set-font-family-AFS.js",
-               "set-color-AFX.js",
-               "insert-table-ACl.js",
-               "indent-item-ABH.js",
-               "add-youtube-ADI.js",
-               "table-merge-cells-ACz.js",
-               "h5-AAz.js",
-               "table-merge-or-split-ADA.js",
-               "h1-AAp.js",
-               "strikethrough-AAm.js",
-               "insert-image-ACD.js",
-               "highlight-ACi.js",
-               "table-delete-column-ACx.js",
-               "table-add-column-before-ACt.js",
-               "numbered-list-ABE.js",
-               "bold-AAh.js",
-               "set-content-ACW.js",
-               "outdent-item-ABI.js",
-               "bullet-list-ABC.js",
-               "h2-AAv.js",
-               "table-add-row-before-ACv.js",
-               "h6-ABA.js",
-               "delete-table-ACr.js",
-               "table-toggle-header-row-ACp.js",
-               "clear-headings-AEf.js",
-               "unset-font-family-AFU.js",
-               "remove-link-ACR.js",
-               "blockquote-ABK.js",
-               "set-link-ACN.js",
-               "h4-AAy.js",
-               "code-block-ABN.js"
-             ]
+      assert Enum.sort(File.ls!(element_actions_path)) ==
+               Enum.sort([
+                 "task-list-ABS.js",
+                 "table-split-cell-ACy.js",
+                 "h3-AAx.js",
+                 "horizontal-rule-ABO.js",
+                 "table-toggle-header-column-ACq.js",
+                 "align-text-ACd.js",
+                 "clear-contents-ABp.js",
+                 "italic-AAj.js",
+                 "table-delete-row-ACw.js",
+                 "set-hard-break-AGC.js",
+                 "unset-color-AFZ.js",
+                 "select-entire-block-AFi.js",
+                 "table-add-column-after-ACs.js",
+                 "table-add-row-after-ACu.js",
+                 "focus-ABr.js",
+                 "insert-content-ADG.js",
+                 "underline-ADB.js",
+                 "set-font-family-AFS.js",
+                 "set-color-AFX.js",
+                 "insert-table-ACl.js",
+                 "indent-item-ABH.js",
+                 "add-youtube-ADI.js",
+                 "table-merge-cells-ACz.js",
+                 "h5-AAz.js",
+                 "table-merge-or-split-ADA.js",
+                 "h1-AAp.js",
+                 "strikethrough-AAm.js",
+                 "insert-image-ACD.js",
+                 "highlight-ACi.js",
+                 "table-delete-column-ACx.js",
+                 "table-add-column-before-ACt.js",
+                 "numbered-list-ABE.js",
+                 "bold-AAh.js",
+                 "set-content-ACW.js",
+                 "outdent-item-ABI.js",
+                 "bullet-list-ABC.js",
+                 "h2-AAv.js",
+                 "table-add-row-before-ACv.js",
+                 "h6-ABA.js",
+                 "delete-table-ACr.js",
+                 "table-toggle-header-row-ACp.js",
+                 "clear-headings-AEf.js",
+                 "unset-font-family-AFU.js",
+                 "remove-link-ACR.js",
+                 "blockquote-ABK.js",
+                 "set-link-ACN.js",
+                 "h4-AAy.js",
+                 "code-block-ABN.js"
+               ])
     end
 
     test "element fields are preserved through encode/decode cycle", %{
