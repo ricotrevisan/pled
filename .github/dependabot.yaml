@@ -19,12 +19,3 @@ updates:
               applies-to: version-updates
               patterns:
                   - "*"
-    - package-ecosystem: "npm"
-      directory: "/assets"
-      schedule:
-          interval: "weekly"
-      groups:
-          js-dependencies:
-              applies-to: version-updates
-              patterns:
-                  - "*"

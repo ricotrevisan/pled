@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.0.30-beta
+
+Pled no longer overwrites work silently. Every sync operation now compares
+three sides — the baseline snapshot, your local `src/`, and the Bubble plugin —
+and refuses anything that would discard changes you did not ask to discard.
+
+### Added
+- `Pled.Sync`: a three-way sync engine classifying the workspace as in sync,
+  local ahead, remote ahead, diverged, or missing a baseline
+- `pled status` and `pled check-remote` report that state and always name the
+  exact next command to run
+- `pled pull --wipe` to discard local changes explicitly
+- `pled watch --interval <seconds>` to set the remote poll period (default 15s)
+
+### Changed
+- `pled watch` is now conflict-aware: it pushes local edits only while the
+  remote is clean, pulls remote changes only while nothing local is unpushed,
+  and pauses with a conflict banner when both sides moved — resuming on its own
+  once you resolve it. It no longer force-pushes on every save.
+- `pled push` refuses to upload when the remote moved since your last pull;
+  `--force` states that intent explicitly
+- `pled pull` refuses to overwrite unpushed local changes, and removes entities
+  deleted or renamed in Bubble instead of leaving stale directories behind
+- Watch reports network failures with exponential backoff and warns loudly when
+  `BUBBLE_COOKIE` expires, instead of silently dying
+
+### Fixed
+- `pled pull` no longer crashes or corrupts the source tree on work-in-progress
+  plugins with missing or malformed entities
+- Action code sections without a body round-trip through pull/push unchanged
+- Encoder validation issues are reported as errors in unattended contexts
+  instead of blocking on a prompt
+
 ## v0.0.29-beta
 
 ### Fixed

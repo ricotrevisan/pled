@@ -93,6 +93,12 @@ esac
 
 print_info "New version: $NEW_VERSION"
 
+# Gate the release on the same checks CI runs
+print_info "Running checks..."
+mix format --check-formatted
+mix compile --warnings-as-errors
+mix test
+
 # Update version in mix.exs
 sed -i.bak "s/version: \"${CURRENT_VERSION}\"/version: \"${NEW_VERSION}\"/" mix.exs
 
@@ -109,27 +115,17 @@ rm mix.exs.bak
 
 print_info "Updated mix.exs with new version"
 
-# Stage the changes
-git add mix.exs
-
-# Commit the changes
-COMMIT_MSG="Bump version from ${CURRENT_VERSION} to ${NEW_VERSION}"
-git commit -m "$COMMIT_MSG"
-
-# Create tag
-git tag "v${NEW_VERSION}"
-
-print_info "Created commit: $COMMIT_MSG"
-print_info "Created tag: v${NEW_VERSION}"
-
-# Push to remote
-print_info "Pushing to origin..."
-git push origin main
-git push origin "v${NEW_VERSION}"
-
-# Build release binaries
+# Build release binaries before anything is published
 print_info "Building release binaries..."
 MIX_ENV=prod mix release
+
+for f in pled_linux_arm pled_linux_x86 pled_macos_arm pled_macos_x86 pled_windows.exe; do
+    if [ ! -f "burrito_out/$f" ]; then
+        print_error "Build did not produce burrito_out/$f"
+        git checkout mix.exs
+        exit 1
+    fi
+done
 
 # Package binaries into archives (so downloaded file is always "pled")
 print_info "Packaging binaries..."
@@ -160,6 +156,19 @@ if [ -f "burrito_out/pled_windows.exe" ]; then
 else
     print_warn "  Skipping pled_windows.exe (not found)"
 fi
+
+# Everything built: now publish the version bump
+git add mix.exs
+COMMIT_MSG="Bump version from ${CURRENT_VERSION} to ${NEW_VERSION}"
+git commit -m "$COMMIT_MSG"
+git tag "v${NEW_VERSION}"
+
+print_info "Created commit: $COMMIT_MSG"
+print_info "Created tag: v${NEW_VERSION}"
+
+print_info "Pushing to origin..."
+git push origin main
+git push origin "v${NEW_VERSION}"
 
 # Create GitHub release and upload archives
 print_info "Creating GitHub release v${NEW_VERSION}..."

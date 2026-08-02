@@ -77,14 +77,31 @@ Pled maintains round-trip fidelity: pulling and pushing won't scramble your plug
 
 ## Installation
 
-- macOS / Linux:
-    chmod +x pled
-    cp pled /usr/local/bin
-- Windows:
-  - Place `pled_windows.exe` somewhere on your PATH and rename to `pled.exe` if desired.
+Download the archive for your platform from the
+[latest release](https://github.com/RicoTrevisan/pled/releases/latest). Each one
+contains a single executable named `pled`.
+
+- macOS / Linux — install into your PATH:
+
+```sh
+# pick your platform: macos-arm, macos-x86, linux-arm, linux-x86
+PLATFORM=macos-arm
+curl -L "https://github.com/RicoTrevisan/pled/releases/latest/download/pled-${PLATFORM}.tar.gz" | tar xz
+chmod +x pled
+sudo mv pled /usr/local/bin/
+```
+
+  Downloading through a browser instead of `curl` makes macOS quarantine the
+  binary ("cannot be opened because the developer cannot be verified"). Clear it
+  with `xattr -d com.apple.quarantine pled`.
+
+- Windows: extract `pled-windows.zip` and put `pled.exe` somewhere on your PATH.
 
 Verify:
     pled help
+
+The first run unpacks the bundled Erlang runtime, so it takes a few seconds;
+later runs are fast.
 
 ## Environment setup
 
