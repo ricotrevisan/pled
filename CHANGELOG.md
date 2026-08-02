@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.1
+
+### Fixed
+- `pled watch` explains that the OS file watcher could not start instead of
+  crashing with a `MatchError` (Linux hosts without `inotify-tools`)
+
 ## v0.1.0
 
 First release out of beta. Pled no longer overwrites work silently. Every sync operation now compares
