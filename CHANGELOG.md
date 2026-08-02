@@ -1,8 +1,8 @@
 # Changelog
 
-## v0.0.30-beta
+## v0.1.0
 
-Pled no longer overwrites work silently. Every sync operation now compares
+First release out of beta. Pled no longer overwrites work silently. Every sync operation now compares
 three sides — the baseline snapshot, your local `src/`, and the Bubble plugin —
 and refuses anything that would discard changes you did not ask to discard.
 

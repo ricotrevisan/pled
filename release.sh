@@ -23,20 +23,21 @@ print_error() {
 
 # Check if argument provided
 if [ $# -eq 0 ]; then
-    print_error "Usage: $0 <patch|minor|major>"
+    print_error "Usage: $0 <patch|minor|major|X.Y.Z[-suffix]>"
     print_info "Examples:"
     print_info "  $0 patch  # 0.0.20-beta → 0.0.21-beta"
     print_info "  $0 minor  # 0.0.20-beta → 0.1.0-beta"
     print_info "  $0 major  # 0.0.20-beta → 1.0.0-beta"
+    print_info "  $0 0.1.0  # exact version, e.g. to drop a -beta suffix"
     exit 1
 fi
 
 BUMP_TYPE=$1
 
 # Validate bump type
-if [[ ! "$BUMP_TYPE" =~ ^(patch|minor|major)$ ]]; then
+if [[ ! "$BUMP_TYPE" =~ ^(patch|minor|major)$ ]] && [[ ! "$BUMP_TYPE" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
     print_error "Invalid bump type: $BUMP_TYPE"
-    print_error "Must be one of: patch, minor, major"
+    print_error "Must be one of: patch, minor, major, or an exact X.Y.Z[-suffix] version"
     exit 1
 fi
 
@@ -77,6 +78,9 @@ fi
 
 # Calculate new version
 case $BUMP_TYPE in
+    [0-9]*)
+        NEW_VERSION="$BUMP_TYPE"
+        ;;
     "patch")
         NEW_PATCH=$((PATCH + 1))
         NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}${SUFFIX}"
@@ -160,7 +164,8 @@ fi
 # Everything built: now publish the version bump
 git add mix.exs
 COMMIT_MSG="Bump version from ${CURRENT_VERSION} to ${NEW_VERSION}"
-git commit -m "$COMMIT_MSG"
+# The bump may already be committed when an exact version was prepared by hand.
+git diff --cached --quiet || git commit -m "$COMMIT_MSG"
 git tag "v${NEW_VERSION}"
 
 print_info "Created commit: $COMMIT_MSG"
@@ -176,7 +181,6 @@ gh release create "v${NEW_VERSION}" \
     ${ARCHIVE_DIR}/pled-*.tar.gz \
     ${ARCHIVE_DIR}/pled-*.zip \
     --title "v${NEW_VERSION}" \
-    --prerelease \
     --generate-notes
 
 print_info "Release v${NEW_VERSION} published with binaries!"
