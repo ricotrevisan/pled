@@ -121,7 +121,7 @@ print_info "Updated mix.exs with new version"
 
 # Build release binaries before anything is published
 print_info "Building release binaries..."
-MIX_ENV=prod mix release
+MIX_ENV=prod mix release --overwrite
 
 for f in pled_linux_arm pled_linux_x86 pled_macos_arm pled_macos_x86 pled_windows.exe; do
     if [ ! -f "burrito_out/$f" ]; then
