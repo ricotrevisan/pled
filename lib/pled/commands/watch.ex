@@ -47,6 +47,10 @@ defmodule Pled.Commands.Watch do
       {:error, reason} when is_atom(reason) ->
         {:error, reason}
 
+      {:error, {:shutdown, message}} ->
+        UI.error("✗ #{message}")
+        {:error, :watcher_unavailable}
+
       {:error, reason} ->
         UI.error("✗ Failed to start the file watcher: #{UI.format_reason(reason)}")
         {:error, reason}

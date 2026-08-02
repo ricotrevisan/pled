@@ -32,10 +32,22 @@ defmodule Pled.FileWatcher do
   @impl true
   def init(opts) do
     dir = Path.join(File.cwd!(), @src_dir)
-    {:ok, watcher_pid} = FileSystem.start_link(dirs: [dir])
-    FileSystem.subscribe(watcher_pid)
 
-    state = %{
+    case FileSystem.start_link(dirs: [dir]) do
+      {:ok, watcher_pid} ->
+        FileSystem.subscribe(watcher_pid)
+        {:ok, schedule_poll(initial_state(watcher_pid, opts))}
+
+      other ->
+        {:stop,
+         {:shutdown,
+          "Could not watch #{dir} (#{inspect(other)}). " <>
+            "On Linux this usually means `inotify-tools` is not installed."}}
+    end
+  end
+
+  defp initial_state(watcher_pid, opts) do
+    %{
       watcher_pid: watcher_pid,
       debounce_timer: nil,
       poll_timer: nil,
@@ -47,8 +59,6 @@ defmodule Pled.FileWatcher do
       poll_interval_ms: configured_poll_interval(opts),
       pull_settle_ms: Keyword.get(opts, :pull_settle_ms, @pull_settle_ms)
     }
-
-    {:ok, schedule_poll(state)}
   end
 
   @impl true
