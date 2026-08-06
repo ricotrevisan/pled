@@ -9,7 +9,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The watch tests exercise real filesystem events
       - run: sudo apt-get update && sudo apt-get install -y inotify-tools
@@ -19,7 +19,7 @@ jobs:
           version-file: .tool-versions
           version-type: strict
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             deps
