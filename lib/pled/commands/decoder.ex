@@ -9,7 +9,7 @@ defmodule Pled.Commands.Decoder do
   rescue
     # All writes below use the bang variants; any failed write aborts the
     # decode with an error naming the file instead of silently skipping.
-    e in File.Error -> {:error, Exception.message(e)}
+    e in [File.Error, ArgumentError] -> {:error, Exception.message(e)}
   end
 
   defp slug_or_key(display, key) do
@@ -280,9 +280,14 @@ defmodule Pled.Commands.Decoder do
   def remove_bubbleisms(nil), do: nil
 
   def remove_bubbleisms(string) do
-    string
-    |> String.replace(~r/(async )?function\([^)]+\) \{/, "")
-    |> String.replace(~r/\}\n*$/, "")
-    |> String.trim()
+    # Match the *whole* outer Bubble function. A global replacement also strips
+    # nested assignments like `data.disable = function(disable) {` from the body.
+    case Regex.named_captures(
+           ~r/\A(?:async\s+)?function\s*\([^)]*\)\s*\{(?<body>[\s\S]*)\}\s*\z/,
+           string
+         ) do
+      %{"body" => body} -> String.trim(body)
+      nil -> raise ArgumentError, "Bubble code is not a complete function wrapper"
+    end
   end
 end

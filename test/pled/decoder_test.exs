@@ -35,7 +35,7 @@ defmodule Pled.DecoderTest do
       assert snippet =~ "script"
     end
 
-    test "remove_bubbleism/1" do
+    test "remove_bubbleisms/1 strips only the outer wrapper" do
       string =
         """
         function(instance, properties, context) {
@@ -47,6 +47,29 @@ defmodule Pled.DecoderTest do
         """
 
       refute Decoder.remove_bubbleisms(string) =~ "function"
+    end
+
+    test "preserves nested function assignments and async code" do
+      body = """
+      data.disable = function(disable) {
+        publish('is_disabled', disable);
+      };
+      data.addQueryParam = function(url, param, value) {
+        return `${url}?${param}=${value}`;
+      };
+      """
+
+      assert Decoder.remove_bubbleisms("function(instance, context) {\n#{body}}") ==
+               String.trim(body)
+
+      assert Decoder.remove_bubbleisms("async function(properties, context) {\n#{body}}") ==
+               String.trim(body)
+    end
+
+    test "rejects a missing wrapper rather than mangling source" do
+      assert_raise ArgumentError, ~r/not a complete function wrapper/, fn ->
+        Decoder.remove_bubbleisms("data.disable = function(disable) { return disable; };")
+      end
     end
   end
 
