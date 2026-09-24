@@ -74,6 +74,7 @@ defmodule Pled.RoundTripTest do
 
     assert {:ok, payload, []} = Encoder.build(src_dir: src_dir)
     assert PluginModel.fingerprint(payload) == PluginModel.fingerprint(remote)
+
     assert get_in(payload, ["plugin_elements", element_key, "code", "initialize", "fn"]) ==
              get_in(remote, ["plugin_elements", element_key, "code", "initialize", "fn"])
   end
