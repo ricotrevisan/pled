@@ -52,6 +52,30 @@ defmodule Pled.RoundTripTest do
     end
   end
 
+  test "nested functions survive decode and encode", %{tmp_dir: tmp_dir} do
+    remote = read_fixture("small_plugin.json")
+    [element_key | _] = Map.keys(remote["plugin_elements"])
+
+    body =
+      "\n  data.disable = function(disable) { return disable; };\n" <>
+        "  data.addQueryParam = function(url, param, value) { return url + param + value; };\n"
+
+    remote =
+      put_in(
+        remote,
+        ["plugin_elements", element_key, "code", "initialize", "fn"],
+        "function(instance, context) {#{body}}"
+      )
+
+    src_dir = Path.join(tmp_dir, "src")
+    File.mkdir_p!(src_dir)
+    File.write!(Path.join(src_dir, "plugin.json"), Jason.encode!(remote, pretty: true))
+    assert :ok = Decoder.decode(remote, tmp_dir)
+
+    assert {:ok, payload, []} = Encoder.build(src_dir: src_dir)
+    assert PluginModel.fingerprint(payload) == PluginModel.fingerprint(remote)
+  end
+
   defp read_fixture(name) do
     :code.priv_dir(:pled)
     |> to_string()
