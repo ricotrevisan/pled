@@ -156,7 +156,11 @@ defmodule Pled.EndToEndTest do
         ])
 
       action_js = File.read!(action_path)
-      assert String.starts_with?(action_js, "if (!instance.data.editor_is_ready)\n ")
+
+      assert String.starts_with?(
+               String.trim_leading(action_js),
+               "if (!instance.data.editor_is_ready)\n "
+             )
 
       assert element_json["actions"]["ACp"] == %{
                "caption" => "Table toggle header row"

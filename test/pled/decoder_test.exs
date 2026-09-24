@@ -60,10 +60,15 @@ defmodule Pled.DecoderTest do
       """
 
       assert Decoder.remove_bubbleisms("function(instance, context) {\n#{body}}") ==
-               String.trim(body)
+               String.trim_trailing(body, "\n")
 
       assert Decoder.remove_bubbleisms("async function(properties, context) {\n#{body}}") ==
-               String.trim(body)
+               String.trim_trailing(body, "\n")
+    end
+
+    test "preserves blank lines inside the outer wrapper" do
+      raw = "function(instance, context) {\n\n  const x = 1;\n\n\n}"
+      assert Decoder.remove_bubbleisms(raw) == "\n  const x = 1;\n\n"
     end
 
     test "rejects a missing wrapper rather than mangling source" do

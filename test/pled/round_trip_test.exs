@@ -58,13 +58,13 @@ defmodule Pled.RoundTripTest do
 
     body =
       "\n  data.disable = function(disable) { return disable; };\n" <>
-        "  data.addQueryParam = function(url, param, value) { return url + param + value; };\n"
+        "  data.addQueryParam = function(url, param, value) { return url + param + value; };\n\n"
 
     remote =
       put_in(
         remote,
         ["plugin_elements", element_key, "code", "initialize", "fn"],
-        "function(instance, context) {#{body}}"
+        "function(instance, context) {\n#{body}\n}"
       )
 
     src_dir = Path.join(tmp_dir, "src")
@@ -74,6 +74,9 @@ defmodule Pled.RoundTripTest do
 
     assert {:ok, payload, []} = Encoder.build(src_dir: src_dir)
     assert PluginModel.fingerprint(payload) == PluginModel.fingerprint(remote)
+
+    assert get_in(payload, ["plugin_elements", element_key, "code", "initialize", "fn"]) ==
+             get_in(remote, ["plugin_elements", element_key, "code", "initialize", "fn"])
   end
 
   defp read_fixture(name) do
