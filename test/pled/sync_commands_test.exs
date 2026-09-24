@@ -115,6 +115,30 @@ defmodule Pled.SyncCommandsTest do
     refute status_output =~ "Detailed changes:"
   end
 
+  test "a local meta_data.platforms_new edit is local ahead", %{tmp_dir: tmp_dir, base: base} do
+    path = Path.join([tmp_dir, "src", "plugin.json"])
+    plugin = path |> File.read!() |> Jason.decode!()
+    plugin = put_in(plugin, ["meta_data", "platforms_new"], "mobile")
+    File.write!(path, Jason.encode!(plugin, pretty: true))
+    stub_remote(base)
+
+    assert {output, :ok} = run_command(tmp_dir, Status, verbose: true)
+
+    assert output =~ "Local ahead"
+    assert output =~ "`pled push`"
+    assert output =~ ~s(metadata.meta_data.platforms_new: ∅ → "mobile")
+  end
+
+  test "a remote meta_data.platforms_new edit is remote ahead", %{tmp_dir: tmp_dir, base: base} do
+    stub_remote(put_in(base, ["meta_data", "platforms_new"], "both"))
+
+    assert {output, :ok} = run_command(tmp_dir, CheckRemote, verbose: true)
+
+    assert output =~ "Remote ahead"
+    assert output =~ "`pled pull`"
+    assert output =~ ~s(metadata.meta_data.platforms_new: ∅ → "both")
+  end
+
   test "malformed baseline errors name the snapshot and recovery command", %{
     tmp_dir: tmp_dir,
     base: base
