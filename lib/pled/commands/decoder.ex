@@ -282,12 +282,23 @@ defmodule Pled.Commands.Decoder do
   def remove_bubbleisms(string) do
     # Match the *whole* outer Bubble function. A global replacement also strips
     # nested assignments like `data.disable = function(disable) {` from the body.
-    case Regex.named_captures(
-           ~r/\A(?:async\s+)?function\s*\([^)]*\)\s*\{(?<body>[\s\S]*)\}\s*\z/,
-           string
-         ) do
-      %{"body" => body} -> String.trim(body)
-      nil -> raise ArgumentError, "Bubble code is not a complete function wrapper"
+    # The encoder contributes one newline on each side of the body. Retain
+    # every other byte, including leading/trailing blank lines, so pull then
+    # encode is identical even when the optional JS parser is unavailable.
+    wrapper = ~r/\A(?:async\s+)?function\s*\([^)]*\)\s*\{\n(?<body>[\s\S]*)\n\}\s*\z/
+
+    case Regex.named_captures(wrapper, string) do
+      %{"body" => body} ->
+        body
+
+      nil ->
+        case Regex.named_captures(
+               ~r/\A(?:async\s+)?function\s*\([^)]*\)\s*\{(?<body>[\s\S]*)\}\s*\z/,
+               string
+             ) do
+          %{"body" => body} -> String.trim(body)
+          nil -> raise ArgumentError, "Bubble code is not a complete function wrapper"
+        end
     end
   end
 end
