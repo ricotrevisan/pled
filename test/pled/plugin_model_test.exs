@@ -77,6 +77,26 @@ defmodule Pled.PluginModelTest do
 
       assert PluginModel.equal?(plugin_a, plugin_b)
     end
+
+    @tag js_runner: :hash_based
+    test "distinguishes every meta_data.platforms_new value" do
+      fingerprints =
+        for platforms <- [nil, "web", "mobile", "both"] do
+          base_plugin()
+          |> Map.put("meta_data", %{"name" => "Sample", "platforms_new" => platforms})
+          |> PluginModel.fingerprint()
+        end
+
+      assert fingerprints |> Enum.uniq() |> length() == 4
+    end
+
+    @tag js_runner: :hash_based
+    test "detects edits to Bubble listing settings under meta_data" do
+      plugin_a = Map.put(base_plugin(), "meta_data", %{"categories" => %{"0" => "productivity"}})
+      plugin_b = put_in(plugin_a, ["meta_data", "categories", "1"], "technical")
+
+      refute PluginModel.equal?(plugin_a, plugin_b)
+    end
   end
 
   describe "code block wrapping" do

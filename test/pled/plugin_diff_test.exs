@@ -37,6 +37,18 @@ defmodule Pled.PluginDiffTest do
              end)
     end
 
+    test "reports meta_data.platforms_new changes as metadata drift" do
+      a = Map.put(base_plugin(), "meta_data", %{"platforms_new" => "web"})
+      b = put_in(a, ["meta_data", "platforms_new"], "mobile")
+
+      diff = PluginDiff.diff(a, b)
+
+      assert diff.summary == %{metadata_field_changed: 1}
+
+      assert [%{path: ["metadata", "meta_data", "platforms_new"], before: "web", after: "mobile"}] =
+               diff.changes
+    end
+
     test "captures element additions" do
       a = base_plugin()
       b = put_in(a, ["plugin_elements", "beta"], sample_element("Beta"))

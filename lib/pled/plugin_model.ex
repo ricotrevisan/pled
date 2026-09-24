@@ -97,9 +97,11 @@ defmodule Pled.PluginModel do
     }
   end
 
+  # Bubble keeps the listing settings (name, description, categories,
+  # platforms_new, ...) under "meta_data"; the flat keys cover older payloads.
   defp extract_metadata(plugin) do
     plugin
-    |> Map.take(["name", "description", "author", "version", "category", "icon"])
+    |> Map.take(["name", "description", "author", "version", "category", "icon", "meta_data"])
     |> sanitize_term()
   end
 

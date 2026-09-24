@@ -72,6 +72,22 @@ defmodule Pled.Commands.PushTest do
     assert request_counts(remote) == %{get: 2, post: 1}
   end
 
+  test "a meta_data.platforms_new-only edit is uploaded", %{tmp_dir: tmp_dir, remote: remote} do
+    change_local_platforms(tmp_dir, "mobile")
+
+    assert {output, :ok} = run_push(tmp_dir)
+    assert output =~ "Push completed"
+    assert [sent] = uploads(remote)
+    assert sent["meta_data"]["platforms_new"] == "mobile"
+
+    set_remote(remote, sent)
+    change_local_platforms(tmp_dir, nil)
+
+    assert {_output, :ok} = run_push(tmp_dir)
+    assert [^sent, cleared] = uploads(remote)
+    assert Map.fetch!(cleared["meta_data"], "platforms_new") == nil
+  end
+
   test "in-sync makes no upload or dist file", %{tmp_dir: tmp_dir, remote: remote} do
     assert {output, :ok} = run_push(tmp_dir)
 
@@ -362,6 +378,13 @@ defmodule Pled.Commands.PushTest do
   defp change_local_name(tmp_dir, name) do
     path = Path.join([tmp_dir, "src", "plugin.json"])
     plugin = path |> File.read!() |> Jason.decode!() |> Map.put("name", name)
+    File.write!(path, Jason.encode!(plugin, pretty: true))
+  end
+
+  defp change_local_platforms(tmp_dir, platforms) do
+    path = Path.join([tmp_dir, "src", "plugin.json"])
+    plugin = path |> File.read!() |> Jason.decode!()
+    plugin = put_in(plugin, ["meta_data", "platforms_new"], platforms)
     File.write!(path, Jason.encode!(plugin, pretty: true))
   end
 
