@@ -109,6 +109,21 @@ defmodule Pled.FileWatcherTest do
     assert Jason.decode!(File.read!(".src.json"))["name"] == "Remote name"
   end
 
+  test "waiting for a local name tolerates an in-progress decoder write" do
+    path = Path.join("src", "plugin.json")
+    File.rm!(path)
+    assert local_name() == nil
+
+    File.write!(path, "")
+    assert local_name() == nil
+
+    File.write!(path, ~s({"name":))
+    assert local_name() == nil
+
+    File.write!(path, Jason.encode!(%{"name" => "Remote name"}))
+    assert local_name() == "Remote name"
+  end
+
   test "divergence holds the watcher with a conflict banner and no network writes", %{
     base: base,
     remote: remote
@@ -350,7 +365,14 @@ defmodule Pled.FileWatcherTest do
   end
 
   defp local_name do
-    Path.join("src", "plugin.json") |> File.read!() |> Jason.decode!() |> Map.get("name")
+    # Polling can overlap the decoder replacing/truncating this file. An
+    # incomplete write is not ready yet; wait_until still enforces its deadline.
+    with {:ok, contents} <- File.read(Path.join("src", "plugin.json")),
+         {:ok, plugin} when is_map(plugin) <- Jason.decode(contents) do
+      Map.get(plugin, "name")
+    else
+      _ -> nil
+    end
   end
 
   defp change_first_field_caption do
